@@ -76,9 +76,9 @@ export default function AnalyticsPage() {
       .catch(() => setLoading(false))
   }, [])
 
-  const ctr = stats && stats.totalVisits > 0
-    ? ((stats.totalClicks / stats.totalVisits) * 100).toFixed(1)
-    : '0.0'
+  const ctr = stats && stats.totalVisits >= 10
+    ? ((stats.totalClicks / stats.totalVisits) * 100).toFixed(1) + '%'
+    : '—'
 
   const mostClicked = stats?.topLinks?.[0]
 
@@ -100,6 +100,7 @@ export default function AnalyticsPage() {
       </nav>
 
       <div className="max-w-4xl mx-auto px-4 py-8">
+        <div className="text-purple-500 text-xs mb-4">Dashboard / Analytics</div>
         <h1 className="text-2xl font-bold text-white mb-2">Analytics</h1>
         <p className="text-purple-400 text-sm mb-8">Full analytics — free. Because you deserve it.</p>
 
@@ -115,7 +116,7 @@ export default function AnalyticsPage() {
               {[
                 { label: 'Total Visits', value: stats?.totalVisits ?? 0, icon: '👁️', color: '#8B5CF6' },
                 { label: 'Total Clicks', value: stats?.totalClicks ?? 0, icon: '👆', color: '#EC4899' },
-                { label: 'Overall CTR', value: `${ctr}%`, icon: '🎯', color: '#10b981' },
+                { label: 'Overall CTR', value: ctr, icon: '🎯', color: '#10b981' },
                 { label: 'Top Link', value: mostClicked?.title ?? 'None yet', icon: '🏆', color: '#f59e0b' },
               ].map(stat => (
                 <div key={stat.label} className="rounded-2xl border border-purple-900/50 p-5"
@@ -161,8 +162,8 @@ export default function AnalyticsPage() {
                 ) : (
                   <div className="space-y-3">
                     {stats?.topLinks?.map((link, i) => {
-                      const total = stats.topLinks.reduce((sum, l) => sum + l.click_count, 0)
-                      const pct = total > 0 ? ((link.click_count / total) * 100).toFixed(0) : 0
+                      const maxValue = Math.max(...stats.topLinks.map(l => l.click_count), 0)
+                      const pct = maxValue > 0 ? ((link.click_count / maxValue) * 100).toFixed(0) : 0
                       return (
                         <div key={link.id} className="flex items-center gap-3">
                           <span className="text-purple-500 text-sm w-4">{i + 1}</span>

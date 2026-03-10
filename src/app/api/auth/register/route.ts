@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { getUserByEmail, getUserByUsername, createUser } from '@/lib/db/queries'
 
+const RESERVED_USERNAMES = [
+  'admin', 'dashboard', 'login', 'register', 'api', 'settings',
+  'analytics', 'about', 'help', 'support', 'www', 'app',
+  'forgot-password', 'not-found',
+]
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
@@ -25,6 +31,11 @@ export async function POST(req: NextRequest) {
         { error: 'Username must be 3–20 characters (letters, numbers, underscores only)' },
         { status: 400 }
       )
+    }
+
+    // Check reserved usernames (CR-002)
+    if (RESERVED_USERNAMES.includes(username.toLowerCase())) {
+      return NextResponse.json({ error: 'This username is reserved' }, { status: 400 })
     }
 
     // Validate password length

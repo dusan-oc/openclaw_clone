@@ -80,7 +80,7 @@ async function main() {
   console.log('📌 Creating admin user...')
   await upsertUser({
     email: 'admin@glimr.io',
-    username: 'admin',
+    username: 'pandaadmin',
     password: 'Admin1234!',
     display_name: 'Glimr Admin',
     bio: 'Platform administrator',
@@ -132,7 +132,7 @@ async function main() {
 
   console.log('\n✅ Seed complete!\n')
   console.log('Accounts:')
-  console.log('  admin@glimr.io  / Admin1234!  (admin)')
+  console.log('  admin@glimr.io  / Admin1234!  (pandaadmin)')
   console.log('  alex@demo.com   / Demo1234!   (alexmucci, neon theme)')
   console.log('  violet@demo.com / Demo1234!   (violetxo, soft theme)')
   console.log('\nRun: npm run dev\n')
