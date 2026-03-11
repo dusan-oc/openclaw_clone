@@ -26,70 +26,81 @@ type Link = {
   click_count: number
 }
 
-type Props = {
-  user: User
-  links: Link[]
-}
-
+type Props = { user: User; links: Link[] }
 type Variant = 'dark' | 'neon' | 'soft'
 
-/* ── Helpers ── */
+/* ════════════════════════════════════════════
+   HELPERS
+   ════════════════════════════════════════════ */
 
 function extractSocialIcons(links: Link[]) {
   const seen = new Set<string>()
-  const icons: { platform: string; color: string; svg: string; url: string }[] = []
+  const icons: { platform: string; svg: string; url: string }[] = []
   for (const link of links) {
     const info = getPlatformIcon(link.url, link.icon)
     if (info.type === 'platform' && info.platform && !seen.has(info.platform)) {
       seen.add(info.platform)
-      icons.push({ platform: info.platform, color: info.color!, svg: info.svg!, url: link.url })
+      icons.push({ platform: info.platform, svg: info.svg!, url: link.url })
     }
   }
   return icons
 }
 
-function getDomain(url: string) {
-  try { return new URL(url).hostname.replace('www.', '') } catch { return url }
+/* ════════════════════════════════════════════
+   VERIFIED BADGE — purple/blue style like LinkMe
+   ════════════════════════════════════════════ */
+
+function VerifiedBadge() {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+      <path d="M12 2L14.09 4.26L17 3.64L17.18 6.57L19.56 8.17L18.27 10.86L19.56 13.56L17.18 15.16L17 18.09L14.09 17.47L12 19.73L9.91 17.47L7 18.09L6.82 15.16L4.44 13.56L5.73 10.86L4.44 8.17L6.82 6.57L7 3.64L9.91 4.26L12 2Z" fill="url(#badge_grad)"/>
+      <path d="M9.5 12.5L11 14L15 10" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+      <defs><linearGradient id="badge_grad" x1="4" y1="2" x2="20" y2="20"><stop stopColor="#818CF8"/><stop offset="1" stopColor="#A78BFA"/></linearGradient></defs>
+    </svg>
+  )
 }
 
-/* ── Platform Badge (top-left of image cards) ── */
+/* ════════════════════════════════════════════
+   PLATFORM BADGE — small icon on image cards (top-left)
+   ════════════════════════════════════════════ */
+
 function PlatformBadge({ link }: { link: Link }) {
   const icon = getPlatformIcon(link.url, link.icon)
   if (icon.type !== 'platform' || !icon.svg) return null
-
   return (
     <div style={{
       position: 'absolute', top: 10, left: 10, zIndex: 5,
-      width: 28, height: 28, borderRadius: '50%',
-      background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)',
+      width: 30, height: 30, borderRadius: '50%',
+      background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(8px)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
-      <span style={{ width: 14, height: 14, color: '#fff' }} dangerouslySetInnerHTML={{ __html: icon.svg }} />
+      <span style={{ width: 15, height: 15, color: '#fff' }} dangerouslySetInnerHTML={{ __html: icon.svg }} />
     </div>
   )
 }
 
-/* ── Card Icon (for non-thumbnail cards) ── */
+/* ════════════════════════════════════════════
+   CARD ICON — colored square icon for non-image cards
+   ════════════════════════════════════════════ */
+
+const SOCIAL_BG: Record<string, string> = {
+  instagram: 'linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045)',
+  tiktok: '#000', x: '#000', youtube: '#FF0000', telegram: '#26A5E4',
+  spotify: '#1DB954', twitch: '#9146FF', snapchat: '#FFFC00',
+  onlyfans: '#00AFF0', fansly: '#1FA7F2', patreon: '#FF424D', threads: '#000',
+}
+
 function CardIcon({ link, variant }: { link: Link; variant: Variant }) {
   const icon = getPlatformIcon(link.url, link.icon)
-  const SOCIAL_BACKGROUNDS: Record<string, string> = {
-    instagram: 'linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045)',
-    tiktok: '#000', x: '#000', youtube: '#FF0000', telegram: '#26A5E4',
-    spotify: '#1DB954', twitch: '#9146FF', snapchat: '#FFFC00',
-    onlyfans: '#00AFF0', fansly: '#1FA7F2', patreon: '#FF424D', threads: '#000',
-  }
   const bg = icon.type === 'platform'
-    ? (SOCIAL_BACKGROUNDS[icon.platform!] || icon.color!)
-    : variant === 'soft' ? 'linear-gradient(135deg, #f9a8d4, #c084fc)' : 'rgba(255,255,255,0.1)'
-  const needsBorder = (p: string) => ['tiktok', 'x', 'threads'].includes(p)
-  const border = icon.type === 'platform' && needsBorder(icon.platform!)
-    ? (variant === 'soft' ? '1px solid rgba(0,0,0,0.08)' : '1px solid rgba(255,255,255,0.15)')
-    : 'none'
-
+    ? (SOCIAL_BG[icon.platform!] || icon.color!) : 'rgba(255,255,255,0.1)'
+  const needsBorder = ['tiktok', 'x', 'threads'].includes(icon.platform ?? '')
   return (
     <div style={{
-      width: 44, height: 44, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-      background: bg, border,
+      width: 44, height: 44, borderRadius: 12,
+      display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+      background: bg,
+      border: needsBorder ? '1px solid rgba(255,255,255,0.15)' : 'none',
     }}>
       {icon.type === 'platform' && icon.svg ? (
         <span style={{ width: 24, height: 24, color: '#fff' }} dangerouslySetInnerHTML={{ __html: icon.svg }} />
@@ -100,360 +111,291 @@ function CardIcon({ link, variant }: { link: Link; variant: Variant }) {
   )
 }
 
-/* ── Link Card ── */
-function LinkCard({ link, index, variant, linkStyle, isGrid }: {
-  link: Link; index: number; variant: Variant; linkStyle: 'default' | 'overlay'; isGrid: boolean
-}) {
-  const isPrimary = index === 0 && !isGrid
-  const hasThumbnail = !!link.thumbnail_url
-  const useOverlay = linkStyle === 'overlay' && hasThumbnail
-  const cardHeight = isGrid ? 140 : (hasThumbnail ? (useOverlay ? 240 : undefined) : undefined)
+/* ════════════════════════════════════════════
+   IMAGE LINK CARD — text overlay on image
+   ════════════════════════════════════════════ */
 
-  // Theme-specific — no box shadows on cards for seamless flow
-  const glassCardBg = variant === 'soft'
-    ? 'rgba(255,255,255,0.45)' : variant === 'neon' ? 'rgba(168,85,247,0.1)' : 'rgba(255,255,255,0.07)'
-  const glassCardBorder = variant === 'soft'
-    ? '1px solid rgba(255,255,255,0.5)' : variant === 'neon'
-      ? (isPrimary ? '1px solid rgba(168,85,247,0.3)' : '1px solid rgba(168,85,247,0.1)')
-      : '1px solid rgba(255,255,255,0.06)'
-  const glassCardShadow = 'none'
-  const titleColor = variant === 'soft' ? '#1a1a2e' : '#fff'
-  const subtitleColor = variant === 'soft' ? '#9ca3af' : 'rgba(255,255,255,0.45)'
+function ImageCard({ link, isGrid, variant }: { link: Link; isGrid: boolean; variant: Variant }) {
+  const height = isGrid ? 160 : 260
+  const borderColor = variant === 'neon' ? 'rgba(168,85,247,0.2)' : 'transparent'
 
-  const neonShadow = variant === 'neon' && isPrimary
-    ? '0 0 30px rgba(168,85,247,0.15), 0 0 60px rgba(168,85,247,0.05)' : 'none'
-
-  if (useOverlay) {
-    // Overlay style: text on top of image with gradient
-    return (
-      <a
-        href={`/api/analytics/click?linkId=${link.id}&url=${encodeURIComponent(link.url)}`}
-        style={{
-          position: 'relative', display: 'block', width: '100%',
-          height: cardHeight, borderRadius: 16, overflow: 'hidden',
-          textDecoration: 'none', cursor: 'pointer',
-          boxShadow: 'none',
-          border: variant === 'neon' ? glassCardBorder : 'none',
-          transition: 'transform 0.2s',
-        }}
-        onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px) scale(1.01)' }}
-        onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0) scale(1)' }}
-      >
-        <img src={link.thumbnail_url!} alt={link.title}
-          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-        <PlatformBadge link={link} />
-        {/* Heavy bottom gradient — fades to pure black for seamless card flow */}
-        <div style={{
-          position: 'absolute', bottom: 0, left: 0, right: 0, height: '50%',
-          background: 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.4) 30%, rgba(0,0,0,0.85) 70%, #000 100%)',
-        }} />
-        {/* Text */}
-        <div style={{
-          position: 'absolute', bottom: 12, left: 14, right: 14, zIndex: 3,
-        }}>
-          <div style={{
-            fontSize: isGrid ? 13 : 16, fontWeight: 700, color: '#fff',
-            textShadow: '0 1px 8px rgba(0,0,0,0.6)',
-            display: 'flex', alignItems: 'center', gap: 8,
-          }}>
-            {link.title}
-            {isPrimary && (
-              <span style={{
-                fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 20,
-                background: 'linear-gradient(135deg, #8B5CF6, #EC4899)',
-                color: '#fff', letterSpacing: 0.5, textTransform: 'uppercase' as const,
-              }}>NEW</span>
-            )}
-          </div>
-        </div>
-      </a>
-    )
-  }
-
-  if (hasThumbnail && linkStyle === 'default') {
-    // Default style: image above, text below
-    return (
-      <a
-        href={`/api/analytics/click?linkId=${link.id}&url=${encodeURIComponent(link.url)}`}
-        style={{
-          position: 'relative', display: 'block', width: '100%', borderRadius: 16, overflow: 'hidden',
-          textDecoration: 'none', cursor: 'pointer',
-          background: glassCardBg, border: glassCardBorder,
-          backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-          boxShadow: 'none',
-          transition: 'transform 0.2s',
-        }}
-        onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)' }}
-        onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)' }}
-      >
-        <div style={{ position: 'relative' }}>
-          <img src={link.thumbnail_url!} alt={link.title}
-            style={{ width: '100%', height: isGrid ? 100 : 220, objectFit: 'cover', display: 'block' }} />
-          <PlatformBadge link={link} />
-        </div>
-        <div style={{ padding: '12px 16px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: isGrid ? 13 : 15, fontWeight: 600, color: titleColor, display: 'flex', alignItems: 'center', gap: 8 }}>
-              {link.title}
-              {isPrimary && (
-                <span style={{
-                  fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 20,
-                  background: 'linear-gradient(135deg, #8B5CF6, #EC4899)',
-                  color: '#fff', letterSpacing: 0.5, textTransform: 'uppercase' as const,
-                }}>NEW</span>
-              )}
-            </div>
-            <div style={{ fontSize: 11, color: subtitleColor, marginTop: 2 }}>{getDomain(link.url)}</div>
-          </div>
-        </div>
-      </a>
-    )
-  }
-
-  // No thumbnail: glassmorphism card
   return (
     <a
       href={`/api/analytics/click?linkId=${link.id}&url=${encodeURIComponent(link.url)}`}
       style={{
-        position: 'relative', display: 'flex', alignItems: 'center', gap: 14,
-        width: '100%', borderRadius: 16, overflow: 'hidden',
+        position: 'relative', display: 'block', width: '100%',
+        height, borderRadius: 16, overflow: 'hidden',
         textDecoration: 'none', cursor: 'pointer',
-        padding: '18px 16px', minHeight: isGrid ? 60 : 72,
-        background: glassCardBg, border: glassCardBorder,
-        backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-        boxShadow: 'none',
-        transition: 'transform 0.2s',
+        border: `1px solid ${borderColor}`,
+        transition: 'transform 0.2s ease',
       }}
-      onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)' }}
-      onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)' }}
+      onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px) scale(1.008)' }}
+      onMouseLeave={e => { e.currentTarget.style.transform = 'none' }}
     >
-      <CardIcon link={link} variant={variant} />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: isGrid ? 13 : 15, fontWeight: 600, color: titleColor, display: 'flex', alignItems: 'center', gap: 8 }}>
-          {link.title}
-          {isPrimary && (
-            <span style={{
-              fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 20,
-              background: 'linear-gradient(135deg, #8B5CF6, #EC4899)',
-              color: '#fff', letterSpacing: 0.5, textTransform: 'uppercase' as const,
-            }}>NEW</span>
-          )}
-        </div>
+      <img src={link.thumbnail_url!} alt={link.title}
+        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+      <PlatformBadge link={link} />
+      {/* Heavy bottom gradient — fades to match page bg for seamless flow */}
+      <div style={{
+        position: 'absolute', bottom: 0, left: 0, right: 0, height: '55%',
+        background: variant === 'soft'
+          ? 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.15) 40%, rgba(0,0,0,0.6) 100%)'
+          : 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.3) 30%, rgba(0,0,0,0.8) 70%, rgba(0,0,0,0.95) 100%)',
+      }} />
+      <div style={{ position: 'absolute', bottom: 14, left: 16, right: 16, zIndex: 3 }}>
         <div style={{
-          fontSize: 11, color: subtitleColor, marginTop: 2,
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const,
-        }}>{getDomain(link.url)}</div>
+          fontSize: isGrid ? 14 : 17, fontWeight: 700, color: '#fff',
+          textShadow: '0 1px 8px rgba(0,0,0,0.7)',
+        }}>
+          {link.title}
+        </div>
       </div>
     </a>
   )
 }
 
-/* ── Social Icons Row ── */
-function SocialIcons({ socials, variant }: {
-  socials: { platform: string; svg: string; url: string }[];
-  variant: Variant
-}) {
-  if (socials.length === 0) return null
-  const iconBg = variant === 'soft' ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.12)'
-  const iconColor = variant === 'soft' ? '#374151' : '#fff'
+/* ════════════════════════════════════════════
+   GLASS LINK CARD — no thumbnail, glassmorphism
+   ════════════════════════════════════════════ */
+
+function GlassCard({ link, isGrid, variant }: { link: Link; isGrid: boolean; variant: Variant }) {
+  const isDark = variant !== 'soft'
+  const bg = isDark
+    ? (variant === 'neon' ? 'rgba(168,85,247,0.08)' : 'rgba(255,255,255,0.06)')
+    : 'rgba(255,255,255,0.7)'
+  const border = isDark
+    ? (variant === 'neon' ? '1px solid rgba(168,85,247,0.15)' : '1px solid rgba(255,255,255,0.08)')
+    : '1px solid rgba(0,0,0,0.06)'
+  const titleColor = isDark ? '#fff' : '#1a1a2e'
+  const subColor = isDark ? 'rgba(255,255,255,0.4)' : '#9ca3af'
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 12 }}>
-      {socials.map(s => (
-        <a key={s.platform} href={`/api/analytics/click?linkId=0&url=${encodeURIComponent(s.url)}`}
-          style={{
-            width: 30, height: 30, borderRadius: '50%',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: iconBg,
-            border: variant !== 'soft' ? '1px solid rgba(255,255,255,0.08)' : 'none',
-            transition: 'transform 0.2s', cursor: 'pointer', textDecoration: 'none',
-          }}
-          onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.15)' }}
-          onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)' }}
-        >
-          <span style={{ width: 15, height: 15, color: iconColor }} dangerouslySetInnerHTML={{ __html: s.svg }} />
-        </a>
-      ))}
-    </div>
-  )
-}
-
-/* ── Verified Badge ── */
-function VerifiedBadge({ variant }: { variant: Variant }) {
-  const bg = variant === 'neon'
-    ? 'linear-gradient(135deg, #A855F7, #06b6d4)'
-    : variant === 'soft'
-      ? 'linear-gradient(135deg, #c084fc, #f9a8d4)'
-      : 'linear-gradient(135deg, #8B5CF6, #EC4899)'
-  return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-      width: 22, height: 22, background: bg, borderRadius: '50%',
-      fontSize: 12, color: '#fff', fontWeight: 700, flexShrink: 0,
-    }}>✓</span>
-  )
-}
-
-/* ── Hero Section ── */
-function HeroSection({ user, displayName, socials, variant }: {
-  user: User; displayName: string;
-  socials: { platform: string; color: string; svg: string; url: string }[];
-  variant: Variant
-}) {
-  const avatarUrl = user.avatar_url || ''
-  const nameColor = '#fff'
-  const usernameColor = 'rgba(255,255,255,0.5)'
-  const gradientEnd = variant === 'soft' ? 'rgba(255,245,250,1)' : '#000'
-  const gradientMid = variant === 'soft' ? 'rgba(255,245,250,0.0)' : 'rgba(0,0,0,0.0)'
-
-  return (
-    <div style={{ width: '100%', position: 'relative', overflow: 'hidden' }}>
-      {avatarUrl ? (
-        <img src={avatarUrl} alt={displayName} style={{ width: '100%', height: 480, objectFit: 'cover', objectPosition: 'center top', display: 'block' }} />
-      ) : (
-        <div style={{
-          width: '100%', height: 480,
-          background: variant === 'soft' ? 'linear-gradient(135deg, #f9a8d4, #c084fc, #93c5fd)' : 'linear-gradient(135deg, #8B5CF6, #EC4899)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 96, fontWeight: 800, color: '#fff',
-        }}>
-          {displayName[0]?.toUpperCase()}
-        </div>
-      )}
-
-      {/* Long smooth gradient */}
-      <div style={{
-        position: 'absolute', bottom: 0, left: 0, right: 0, height: '65%',
-        background: `linear-gradient(to bottom, transparent 0%, ${gradientMid} 40%, ${gradientEnd} 100%)`,
-      }} />
-
-      {/* Profile info overlaid on hero */}
-      <div style={{ position: 'absolute', bottom: 20, left: 0, right: 0, textAlign: 'center', zIndex: 3 }}>
-        <div style={{
-          fontSize: 30, fontWeight: 800, color: nameColor, letterSpacing: -0.5,
-          display: 'inline-flex', alignItems: 'center', gap: 8,
-          textShadow: '0 2px 12px rgba(0,0,0,0.5)',
-        }}>
-          {displayName}
-          <VerifiedBadge variant={variant} />
-        </div>
-        <div style={{ fontSize: 14, color: usernameColor, marginTop: 2, fontWeight: 400, textShadow: '0 1px 6px rgba(0,0,0,0.4)' }}>@{user.username}</div>
-        <SocialIcons socials={socials} variant={variant} />
+    <a
+      href={`/api/analytics/click?linkId=${link.id}&url=${encodeURIComponent(link.url)}`}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 14,
+        width: '100%', borderRadius: 16, overflow: 'hidden',
+        textDecoration: 'none', cursor: 'pointer',
+        padding: isGrid ? '14px 12px' : '18px 16px',
+        background: bg, border,
+        backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+        transition: 'transform 0.2s ease',
+      }}
+      onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)' }}
+      onMouseLeave={e => { e.currentTarget.style.transform = 'none' }}
+    >
+      <CardIcon link={link} variant={variant} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: isGrid ? 13 : 15, fontWeight: 600, color: titleColor }}>{link.title}</div>
+        {!isGrid && (
+          <div style={{ fontSize: 11, color: subColor, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
+            {(() => { try { return new URL(link.url).hostname.replace('www.', '') } catch { return '' } })()}
+          </div>
+        )}
       </div>
-    </div>
+    </a>
   )
 }
 
-/* ── Blurred Background ── */
-function BlurredBackground({ avatarUrl, variant }: { avatarUrl: string; variant: Variant }) {
-  if (!avatarUrl) return null
+/* ════════════════════════════════════════════
+   LINK CARD — routes to Image or Glass
+   ════════════════════════════════════════════ */
 
-  if (variant === 'soft') {
-    return (
-      <div style={{
-        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-        backgroundImage: `url(${avatarUrl})`,
-        backgroundSize: 'cover', backgroundPosition: 'center top',
-        filter: 'blur(80px) brightness(1.2) saturate(0.4) opacity(0.3)',
-        transform: 'scale(1.3)', zIndex: 0,
-      }} />
-    )
+function LinkCard({ link, isGrid, variant, linkStyle }: {
+  link: Link; isGrid: boolean; variant: Variant; linkStyle: 'default' | 'overlay'
+}) {
+  // If has thumbnail and overlay style → image card
+  // If has thumbnail and default style → image card (always overlay for image cards — it looks better)
+  // Actually: overlay is always better for thumbnails. Default = glass card for non-thumbnail links.
+  if (link.thumbnail_url) {
+    return <ImageCard link={link} isGrid={isGrid} variant={variant} />
   }
-
-  return (
-    <>
-      <div style={{
-        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-        backgroundImage: `url(${avatarUrl})`,
-        backgroundSize: 'cover', backgroundPosition: 'center top',
-        filter: `blur(50px) brightness(${variant === 'neon' ? 0.25 : 0.35}) saturate(1.4)`,
-        transform: 'scale(1.25)', zIndex: 0,
-      }} />
-      <div style={{
-        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-        background: 'linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0.8) 100%)',
-        zIndex: 1,
-      }} />
-    </>
-  )
+  return <GlassCard link={link} isGrid={isGrid} variant={variant} />
 }
 
-/* ── Links Section with Grid/List layout ── */
+/* ════════════════════════════════════════════
+   LINKS SECTION — list or grid layout
+   ════════════════════════════════════════════ */
+
 function LinksSection({ links, variant, linkStyle, layout }: {
   links: Link[]; variant: Variant; linkStyle: 'default' | 'overlay'; layout: 'list' | 'grid'
 }) {
   if (links.length === 0) return null
 
   if (layout === 'grid' && links.length > 1) {
-    const firstLink = links[0]
-    const restLinks = links.slice(1)
-    // If odd number of remaining links, last one goes full-width
-    const pairedLinks = restLinks.length % 2 === 1 ? restLinks.slice(0, -1) : restLinks
-    const lastLink = restLinks.length % 2 === 1 ? restLinks[restLinks.length - 1] : null
+    const first = links[0]
+    const rest = links.slice(1)
+
     return (
-      <>
-        {/* First link: full width */}
-        <LinkCard link={firstLink} index={0} variant={variant} linkStyle={linkStyle} isGrid={false} />
-        {/* Remaining: 2-column grid */}
-        {pairedLinks.length > 0 && (
-          <div style={{
-            display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6,
-          }}>
-            {pairedLinks.map((link, i) => (
-              <LinkCard key={link.id} link={link} index={i + 1} variant={variant} linkStyle={linkStyle} isGrid={true} />
-            ))}
-          </div>
-        )}
-        {/* Orphaned last link: full width */}
-        {lastLink && (
-          <LinkCard link={lastLink} index={restLinks.length} variant={variant} linkStyle={linkStyle} isGrid={false} />
-        )}
-      </>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {/* First link always full width */}
+        <LinkCard link={first} isGrid={false} variant={variant} linkStyle={linkStyle} />
+        {/* Rest in 2-column grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+          {rest.map(link => (
+            <LinkCard key={link.id} link={link} isGrid={true} variant={variant} linkStyle={linkStyle} />
+          ))}
+        </div>
+      </div>
     )
   }
 
+  // List layout
   return (
-    <>
-      {links.map((link, i) => (
-        <LinkCard key={link.id} link={link} index={i} variant={variant} linkStyle={linkStyle} isGrid={false} />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      {links.map(link => (
+        <LinkCard key={link.id} link={link} isGrid={false} variant={variant} linkStyle={linkStyle} />
       ))}
-    </>
+    </div>
   )
 }
 
-/* ── Main Profile ── */
-function ProfileLayout({ user, links: enabledLinks, variant }: Props & { variant: Variant }) {
-  const socials = extractSocialIcons(enabledLinks)
+/* ════════════════════════════════════════════
+   MAIN PROFILE PAGE
+   ════════════════════════════════════════════ */
+
+export default function ProfilePage({ user, links }: Props) {
+  const enabledLinks = links.filter(l => l.enabled === 1)
+  const variant: Variant = user.theme === 'neon' ? 'neon' : user.theme === 'soft' ? 'soft' : 'dark'
   const displayName = user.display_name ?? user.username
+  const avatarUrl = user.avatar_url || ''
   const showBg = user.show_blurred_bg === 1
   const showBio = user.show_bio === 1
+  const isSoft = variant === 'soft'
 
-  const pageBg = variant === 'soft'
-    ? 'linear-gradient(180deg, #FFF5FA 0%, #FDF4FF 30%, #F5F3FF 100%)'
+  // Page background
+  const pageBg = isSoft
+    ? '#FFF5FA'
     : '#000'
 
-  const bioColor = variant === 'soft' ? '#6b7280' : variant === 'neon' ? '#c4b5fd' : 'rgba(255,255,255,0.6)'
+  // Bio color
+  const bioColor = isSoft ? '#6b7280' : variant === 'neon' ? '#c4b5fd' : 'rgba(255,255,255,0.55)'
 
   return (
-    <div style={{ fontFamily: "'Inter', -apple-system, sans-serif", background: pageBg, minHeight: '100vh', display: 'flex', justifyContent: 'center', overflowX: 'hidden' }}>
+    <div style={{
+      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+      background: pageBg, minHeight: '100vh',
+      display: 'flex', justifyContent: 'center',
+      overflowX: 'hidden',
+    }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-        ${variant === 'neon' ? `@keyframes neonGlow { 0%,100%{box-shadow:0 0 8px rgba(168,85,247,0.3),0 0 20px rgba(168,85,247,0.1);}50%{box-shadow:0 0 16px rgba(168,85,247,0.5),0 0 40px rgba(168,85,247,0.2);}}` : ''}
-        * { box-sizing: border-box; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: ${pageBg}; }
+        ${variant === 'neon' ? `@keyframes neonPulse { 0%,100%{opacity:0.6}50%{opacity:1} }` : ''}
       `}</style>
 
-      {showBg && <BlurredBackground avatarUrl={user.avatar_url || ''} variant={variant} />}
+      {/* ── Blurred Background ── */}
+      {showBg && avatarUrl && (
+        <>
+          <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            backgroundImage: `url(${avatarUrl})`,
+            backgroundSize: 'cover', backgroundPosition: 'center top',
+            filter: isSoft
+              ? 'blur(80px) brightness(1.3) saturate(0.3)'
+              : `blur(60px) brightness(${variant === 'neon' ? 0.2 : 0.3}) saturate(1.5)`,
+            transform: 'scale(1.3)',
+            zIndex: 0,
+          }} />
+          {!isSoft && (
+            <div style={{
+              position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+              background: 'linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.5) 50%, rgba(0,0,0,0.85) 100%)',
+              zIndex: 1,
+            }} />
+          )}
+        </>
+      )}
 
-      <div style={{ position: 'relative', zIndex: 2, width: '100%', maxWidth: 440, minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <HeroSection user={user} displayName={displayName} socials={socials} variant={variant} />
+      {/* ── Page Container ── */}
+      <div style={{
+        position: 'relative', zIndex: 2,
+        width: '100%', maxWidth: 440,
+        minHeight: '100vh',
+        display: 'flex', flexDirection: 'column',
+      }}>
 
-        <div style={{ width: '100%', padding: '12px 16px 40px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {showBio && user.bio && (
-            <p style={{
-              textAlign: 'center', color: bioColor, fontSize: 13, lineHeight: 1.5,
-              marginBottom: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-            }}>{user.bio}</p>
+        {/* ════ HERO SECTION ════
+            This is THE most important part. The hero photo IS the page.
+            Name + handle overlay on the bottom with a dramatic gradient.
+            The whole thing is a floating rounded card. */}
+        <div style={{
+          position: 'relative',
+          margin: '8px 8px 0 8px',
+          borderRadius: 24,
+          overflow: 'hidden',
+          // Subtle outer glow for depth
+          boxShadow: isSoft
+            ? '0 4px 30px rgba(0,0,0,0.08)'
+            : '0 0 40px rgba(0,0,0,0.3)',
+        }}>
+          {/* Hero image */}
+          {avatarUrl ? (
+            <img src={avatarUrl} alt={displayName} style={{
+              width: '100%', height: 520, objectFit: 'cover', objectPosition: 'center top', display: 'block',
+            }} />
+          ) : (
+            <div style={{
+              width: '100%', height: 520,
+              background: isSoft
+                ? 'linear-gradient(135deg, #f9a8d4, #c084fc, #93c5fd)'
+                : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 120, fontWeight: 900, color: 'rgba(255,255,255,0.3)',
+            }}>
+              {displayName[0]?.toUpperCase()}
+            </div>
           )}
 
+          {/* Dramatic bottom gradient — long, smooth, fading to page bg */}
+          <div style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0, height: '60%',
+            background: isSoft
+              ? 'linear-gradient(to bottom, transparent 0%, rgba(255,245,250,0.05) 30%, rgba(255,245,250,0.6) 70%, rgba(255,245,250,1) 100%)'
+              : 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.15) 30%, rgba(0,0,0,0.65) 65%, rgba(0,0,0,0.92) 100%)',
+          }} />
+
+          {/* Name + badge + handle overlaid on hero */}
+          <div style={{
+            position: 'absolute', bottom: 24, left: 0, right: 0,
+            textAlign: 'center', zIndex: 3,
+          }}>
+            <div style={{
+              fontSize: 36, fontWeight: 900, color: '#fff',
+              letterSpacing: -0.8,
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              textShadow: '0 2px 20px rgba(0,0,0,0.5)',
+            }}>
+              {displayName}
+              <VerifiedBadge />
+            </div>
+            <div style={{
+              fontSize: 15, color: 'rgba(255,255,255,0.55)', marginTop: 4,
+              fontWeight: 400,
+              textShadow: '0 1px 8px rgba(0,0,0,0.4)',
+            }}>
+              @{user.username}
+            </div>
+          </div>
+        </div>
+
+        {/* ════ CONTENT BELOW HERO ════ */}
+        <div style={{ padding: '10px 8px 40px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+
+          {/* Bio — minimal, tight */}
+          {showBio && user.bio && (
+            <p style={{
+              textAlign: 'center', color: bioColor,
+              fontSize: 13, lineHeight: 1.5,
+              padding: '4px 16px 8px',
+              display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+            }}>
+              {user.bio}
+            </p>
+          )}
+
+          {/* Links */}
           <LinksSection
             links={enabledLinks}
             variant={variant}
@@ -464,11 +406,4 @@ function ProfileLayout({ user, links: enabledLinks, variant }: Props & { variant
       </div>
     </div>
   )
-}
-
-/* ── Main Export ── */
-export default function ProfilePage({ user, links }: Props) {
-  const enabledLinks = links.filter(l => l.enabled === 1)
-  const variant: Variant = user.theme === 'neon' ? 'neon' : user.theme === 'soft' ? 'soft' : 'dark'
-  return <ProfileLayout user={user} links={enabledLinks} variant={variant} />
 }
