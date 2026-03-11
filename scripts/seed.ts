@@ -97,7 +97,7 @@ async function main() {
     display_name: 'Alex Mucci',
     bio: '🌟 Content creator | Subscribe for exclusive content 🔥',
     role: 'user',
-    theme: 'neon',
+    theme: 'classic',
   })
 
   if (alex) {
