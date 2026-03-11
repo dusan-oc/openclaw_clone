@@ -1,6 +1,49 @@
 'use client'
 
+import { useState } from 'react'
 import { getPlatformIcon } from '@/lib/platform-icons'
+
+function isOnlyFansUrl(url: string) {
+  return /onlyfans\.com/i.test(url)
+}
+
+function ContentWarningModal({ url, onClose }: { url: string; onClose: () => void }) {
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 9999,
+      background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: 20,
+    }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{
+        background: '#fff', borderRadius: 16, padding: '32px 28px 24px', maxWidth: 400, width: '100%',
+        position: 'relative', fontFamily: 'Inter, sans-serif', color: '#111',
+      }}>
+        <button onClick={onClose} style={{
+          position: 'absolute', top: 12, right: 12, background: 'none', border: '1.5px solid #ddd',
+          borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', fontSize: 18, color: '#666',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>✕</button>
+        <h3 style={{ margin: '0 0 8px', fontSize: 20, fontWeight: 700, textAlign: 'center' }}>
+          18+ content warning
+        </h3>
+        <p style={{ margin: '0 0 24px', fontSize: 14, color: '#666', textAlign: 'center', lineHeight: 1.5 }}>
+          This link may contain content that is not appropriate for all audiences.
+        </p>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <button onClick={onClose} style={{
+            flex: 1, padding: '14px 0', borderRadius: 999, border: '1.5px solid #ddd',
+            background: '#fff', fontSize: 15, fontWeight: 600, cursor: 'pointer', color: '#111',
+          }}>Nevermind</button>
+          <button onClick={() => { onClose(); window.open(url, '_blank', 'noopener,noreferrer') }} style={{
+            flex: 1, padding: '14px 0', borderRadius: 999, border: 'none',
+            background: '#111', color: '#fff', fontSize: 15, fontWeight: 600,
+            cursor: 'pointer', textAlign: 'center',
+          }}>Continue</button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 type User = {
   id: number
@@ -117,13 +160,26 @@ function CardIcon({ link, variant }: { link: Link; variant: Variant }) {
    IMAGE LINK CARD — text overlay on image
    ════════════════════════════════════════════ */
 
-function ImageCard({ link, isGrid, variant }: { link: Link; isGrid: boolean; variant: Variant }) {
+type OnWarning = (url: string) => void
+
+function linkProps(link: Link, onWarning?: OnWarning) {
+  const analyticsUrl = `/api/analytics/click?linkId=${link.id}&url=${encodeURIComponent(link.url)}`
+  if (onWarning && isOnlyFansUrl(link.url)) {
+    return {
+      href: '#' as string,
+      onClick: (e: React.MouseEvent) => { e.preventDefault(); onWarning(analyticsUrl) },
+    }
+  }
+  return { href: analyticsUrl }
+}
+
+function ImageCard({ link, isGrid, variant, onWarning }: { link: Link; isGrid: boolean; variant: Variant; onWarning?: OnWarning }) {
   const height = isGrid ? 160 : 260
   const borderColor = variant === 'neon' ? 'rgba(168,85,247,0.2)' : 'transparent'
 
   return (
     <a
-      href={`/api/analytics/click?linkId=${link.id}&url=${encodeURIComponent(link.url)}`}
+      {...linkProps(link, onWarning)}
       style={{
         position: 'relative', display: 'block', width: '100%',
         height, borderRadius: 16, overflow: 'hidden',
@@ -160,7 +216,7 @@ function ImageCard({ link, isGrid, variant }: { link: Link; isGrid: boolean; var
    DEFAULT IMAGE CARD — image on top, text row below
    ════════════════════════════════════════════ */
 
-function DefaultImageCard({ link, isGrid, variant }: { link: Link; isGrid: boolean; variant: Variant }) {
+function DefaultImageCard({ link, isGrid, variant, onWarning }: { link: Link; isGrid: boolean; variant: Variant; onWarning?: OnWarning }) {
   const isDark = variant !== 'soft'
   const bg = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.7)'
   const border = isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.06)'
@@ -169,7 +225,7 @@ function DefaultImageCard({ link, isGrid, variant }: { link: Link; isGrid: boole
 
   return (
     <a
-      href={`/api/analytics/click?linkId=${link.id}&url=${encodeURIComponent(link.url)}`}
+      {...linkProps(link, onWarning)}
       style={{
         display: 'block', width: '100%', borderRadius: 16, overflow: 'hidden',
         textDecoration: 'none', cursor: 'pointer',
@@ -204,7 +260,7 @@ function DefaultImageCard({ link, isGrid, variant }: { link: Link; isGrid: boole
    GLASS LINK CARD — no thumbnail, glassmorphism
    ════════════════════════════════════════════ */
 
-function GlassCard({ link, isGrid, variant }: { link: Link; isGrid: boolean; variant: Variant }) {
+function GlassCard({ link, isGrid, variant, onWarning }: { link: Link; isGrid: boolean; variant: Variant; onWarning?: OnWarning }) {
   const isDark = variant !== 'soft'
   const bg = isDark
     ? (variant === 'neon' ? 'rgba(168,85,247,0.08)' : 'rgba(255,255,255,0.06)')
@@ -217,7 +273,7 @@ function GlassCard({ link, isGrid, variant }: { link: Link; isGrid: boolean; var
 
   return (
     <a
-      href={`/api/analytics/click?linkId=${link.id}&url=${encodeURIComponent(link.url)}`}
+      {...linkProps(link, onWarning)}
       style={{
         display: 'flex', alignItems: 'center', gap: 14,
         width: '100%', borderRadius: 16, overflow: 'hidden',
@@ -247,24 +303,24 @@ function GlassCard({ link, isGrid, variant }: { link: Link; isGrid: boolean; var
    LINK CARD — routes to Image or Glass
    ════════════════════════════════════════════ */
 
-function LinkCard({ link, isGrid, variant, linkStyle }: {
-  link: Link; isGrid: boolean; variant: Variant; linkStyle: 'default' | 'overlay'
+function LinkCard({ link, isGrid, variant, linkStyle, onWarning }: {
+  link: Link; isGrid: boolean; variant: Variant; linkStyle: 'default' | 'overlay'; onWarning?: OnWarning
 }) {
   if (link.thumbnail_url && linkStyle === 'overlay') {
-    return <ImageCard link={link} isGrid={isGrid} variant={variant} />
+    return <ImageCard link={link} isGrid={isGrid} variant={variant} onWarning={onWarning} />
   }
   if (link.thumbnail_url && linkStyle === 'default') {
-    return <DefaultImageCard link={link} isGrid={isGrid} variant={variant} />
+    return <DefaultImageCard link={link} isGrid={isGrid} variant={variant} onWarning={onWarning} />
   }
-  return <GlassCard link={link} isGrid={isGrid} variant={variant} />
+  return <GlassCard link={link} isGrid={isGrid} variant={variant} onWarning={onWarning} />
 }
 
 /* ════════════════════════════════════════════
    LINKS SECTION — list or grid layout
    ════════════════════════════════════════════ */
 
-function LinksSection({ links, variant, linkStyle }: {
-  links: Link[]; variant: Variant; linkStyle: 'default' | 'overlay'
+function LinksSection({ links, variant, linkStyle, onWarning }: {
+  links: Link[]; variant: Variant; linkStyle: 'default' | 'overlay'; onWarning?: OnWarning
 }) {
   if (links.length === 0) return null
 
@@ -288,12 +344,12 @@ function LinksSection({ links, variant, linkStyle }: {
         if (Array.isArray(row)) {
           return (
             <div key={`row-${idx}`} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-              <LinkCard link={row[0]} isGrid={true} variant={variant} linkStyle={linkStyle} />
-              <LinkCard link={row[1]} isGrid={true} variant={variant} linkStyle={linkStyle} />
+              <LinkCard link={row[0]} isGrid={true} variant={variant} linkStyle={linkStyle} onWarning={onWarning} />
+              <LinkCard link={row[1]} isGrid={true} variant={variant} linkStyle={linkStyle} onWarning={onWarning} />
             </div>
           )
         }
-        return <LinkCard key={row.id} link={row} isGrid={false} variant={variant} linkStyle={linkStyle} />
+        return <LinkCard key={row.id} link={row} isGrid={false} variant={variant} linkStyle={linkStyle} onWarning={onWarning} />
       })}
     </div>
   )
@@ -304,6 +360,7 @@ function LinksSection({ links, variant, linkStyle }: {
    ════════════════════════════════════════════ */
 
 export default function ProfilePage({ user, links }: Props) {
+  const [warningUrl, setWarningUrl] = useState<string | null>(null)
   const enabledLinks = links.filter(l => l.enabled === 1)
   const variant: Variant = user.theme === 'neon' ? 'neon' : user.theme === 'soft' ? 'soft' : 'dark'
   const displayName = user.display_name ?? user.username
@@ -322,6 +379,8 @@ export default function ProfilePage({ user, links }: Props) {
   const bioColor = isSoft ? '#6b7280' : variant === 'neon' ? '#c4b5fd' : 'rgba(255,255,255,0.55)'
 
   return (
+    <>
+    {warningUrl && <ContentWarningModal url={warningUrl} onClose={() => setWarningUrl(null)} />}
     <div style={{
       fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
       background: pageBg, minHeight: '100vh',
@@ -361,7 +420,7 @@ export default function ProfilePage({ user, links }: Props) {
       {/* ── Page Container ── */}
       <div style={{
         position: 'relative', zIndex: 2,
-        width: '100%', maxWidth: 460,
+        width: '100%', maxWidth: 560,
         minHeight: '100vh',
         display: 'flex', flexDirection: 'column',
       }}>
@@ -441,21 +500,21 @@ export default function ProfilePage({ user, links }: Props) {
                     const icon = getPlatformIcon(link.url, link.icon)
                     return (
                       <a key={link.id}
-                        href={`/api/analytics/click?linkId=${link.id}&url=${encodeURIComponent(link.url)}`}
+                        {...linkProps(link, setWarningUrl)}
                         style={{
                           width: 34, height: 34, borderRadius: '50%',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          background: 'rgba(255,255,255,0.15)',
-                          border: '1px solid rgba(255,255,255,0.12)',
+                          background: isSoft ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.15)',
+                          border: isSoft ? '1px solid rgba(0,0,0,0.08)' : '1px solid rgba(255,255,255,0.12)',
                           backdropFilter: 'blur(8px)',
                           transition: 'transform 0.2s, background 0.2s',
                           cursor: 'pointer', textDecoration: 'none',
                         }}
-                        onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.15)'; e.currentTarget.style.background = 'rgba(255,255,255,0.25)' }}
-                        onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = 'rgba(255,255,255,0.15)' }}
+                        onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.15)'; e.currentTarget.style.background = isSoft ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.25)' }}
+                        onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = isSoft ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.15)' }}
                       >
                         {icon.type === 'platform' && icon.svg ? (
-                          <span style={{ width: 17, height: 17, color: '#fff' }} dangerouslySetInnerHTML={{ __html: icon.svg }} />
+                          <span style={{ width: 17, height: 17, color: isSoft ? '#1a1a2e' : '#fff' }} dangerouslySetInnerHTML={{ __html: icon.svg }} />
                         ) : (
                           <span style={{ fontSize: 16 }}>{icon.emoji || link.icon}</span>
                         )}
@@ -485,10 +544,12 @@ export default function ProfilePage({ user, links }: Props) {
               links={enabledLinks}
               variant={variant}
               linkStyle={user.link_style}
+              onWarning={setWarningUrl}
             />
           </div>
         </div>
       </div>
     </div>
+    </>
   )
 }
