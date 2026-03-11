@@ -419,28 +419,30 @@ export default function ProfilePage({ user, links }: Props) {
             textAlign: 'center', zIndex: 3,
           }}>
             <div style={{
-              fontSize: 36, fontWeight: 900, color: '#fff',
+              fontSize: 36, fontWeight: 900,
+              color: isSoft ? '#1a1a2e' : '#fff',
               letterSpacing: -0.8,
               display: 'inline-flex', alignItems: 'center', gap: 8,
-              textShadow: '0 2px 20px rgba(0,0,0,0.5)',
+              textShadow: isSoft ? '0 1px 12px rgba(255,255,255,0.5)' : '0 2px 20px rgba(0,0,0,0.5)',
             }}>
               {displayName}
               <VerifiedBadge />
             </div>
             <div style={{
-              fontSize: 15, color: 'rgba(255,255,255,0.55)', marginTop: 4,
-              fontWeight: 400,
-              textShadow: '0 1px 8px rgba(0,0,0,0.4)',
+              fontSize: 15,
+              color: isSoft ? 'rgba(26,26,46,0.5)' : 'rgba(255,255,255,0.55)',
+              marginTop: 4, fontWeight: 400,
+              textShadow: isSoft ? 'none' : '0 1px 8px rgba(0,0,0,0.4)',
             }}>
               @{user.username}
             </div>
             {/* Bio lives INSIDE the hero — no orphaned text */}
             {showBio && user.bio && (
               <p style={{
-                color: 'rgba(255,255,255,0.5)',
+                color: isSoft ? 'rgba(26,26,46,0.45)' : 'rgba(255,255,255,0.5)',
                 fontSize: 13, lineHeight: 1.5,
                 marginTop: 6, padding: '0 24px',
-                textShadow: '0 1px 6px rgba(0,0,0,0.3)',
+                textShadow: isSoft ? 'none' : '0 1px 6px rgba(0,0,0,0.3)',
                 display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
               }}>
                 {user.bio}
