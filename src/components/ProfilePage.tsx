@@ -28,12 +28,11 @@ type Props = {
 
 function PlatformBadge({ url, fallbackEmoji }: { url: string; fallbackEmoji: string }) {
   const icon = getPlatformIcon(url, fallbackEmoji)
-  if (icon.type === 'platform') {
+  if (icon.type === 'platform' && icon.svg) {
     return (
-      <span className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
-        style={{ background: icon.color }}>
-        {icon.letter}
-      </span>
+      <span className="w-6 h-6 shrink-0 text-white"
+        dangerouslySetInnerHTML={{ __html: icon.svg }}
+      />
     )
   }
   return <span className="text-xl shrink-0">{icon.emoji}</span>
