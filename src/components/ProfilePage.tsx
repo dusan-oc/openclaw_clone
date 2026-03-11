@@ -361,131 +361,132 @@ export default function ProfilePage({ user, links }: Props) {
       {/* ── Page Container ── */}
       <div style={{
         position: 'relative', zIndex: 2,
-        width: '100%', maxWidth: 440,
+        width: '100%', maxWidth: 460,
         minHeight: '100vh',
         display: 'flex', flexDirection: 'column',
       }}>
 
-        {/* ════ HERO SECTION ════
-            This is THE most important part. The hero photo IS the page.
-            Name + handle overlay on the bottom with a dramatic gradient.
-            The whole thing is a floating rounded card. */}
+        {/* ════ THE CARD ════
+            One big card that contains EVERYTHING — hero image + name + links.
+            Rounded top corners, extends to the bottom of the page.
+            Like LinkMe: the hero is wider, links are narrower inside it. */}
         <div style={{
           position: 'relative',
-          margin: '8px 8px 0 8px',
-          borderTopLeftRadius: 24,
-          borderTopRightRadius: 24,
-          borderBottomLeftRadius: 0,
-          borderBottomRightRadius: 0,
+          margin: '8px 4px 0 4px',
+          borderTopLeftRadius: 28,
+          borderTopRightRadius: 28,
+          borderBottomLeftRadius: 28,
+          borderBottomRightRadius: 28,
           overflow: 'hidden',
-          // Subtle outer glow for depth
+          background: isSoft ? '#FFF5FA' : '#0a0a0a',
           boxShadow: isSoft
             ? '0 4px 30px rgba(0,0,0,0.08)'
-            : '0 0 40px rgba(0,0,0,0.3)',
+            : '0 0 50px rgba(0,0,0,0.4)',
+          minHeight: '95vh',
         }}>
           {/* Hero image */}
-          {avatarUrl ? (
-            <img src={avatarUrl} alt={displayName} style={{
-              width: '100%', height: 520, objectFit: 'cover', objectPosition: 'center top', display: 'block',
-            }} />
-          ) : (
-            <div style={{
-              width: '100%', height: 520,
-              background: isSoft
-                ? 'linear-gradient(135deg, #f9a8d4, #c084fc, #93c5fd)'
-                : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 120, fontWeight: 900, color: 'rgba(255,255,255,0.3)',
-            }}>
-              {displayName[0]?.toUpperCase()}
-            </div>
-          )}
-
-          {/* Dramatic bottom gradient — fades to fully opaque so hero bleeds into content */}
-          <div style={{
-            position: 'absolute', bottom: 0, left: 0, right: 0, height: '65%',
-            background: isSoft
-              ? 'linear-gradient(to bottom, transparent 0%, rgba(255,245,250,0.05) 25%, rgba(255,245,250,0.5) 60%, rgba(255,245,250,1) 100%)'
-              : 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.1) 25%, rgba(0,0,0,0.5) 55%, rgba(0,0,0,0.85) 80%, #000 100%)',
-          }} />
-
-          {/* Name + badge + handle + bio overlaid on hero */}
-          <div style={{
-            position: 'absolute', bottom: 24, left: 0, right: 0,
-            textAlign: 'center', zIndex: 3,
-          }}>
-            <div style={{
-              fontSize: 36, fontWeight: 900,
-              color: isSoft ? '#1a1a2e' : '#fff',
-              letterSpacing: -0.8,
-              display: 'inline-flex', alignItems: 'center', gap: 8,
-              textShadow: isSoft ? '0 1px 12px rgba(255,255,255,0.5)' : '0 2px 20px rgba(0,0,0,0.5)',
-            }}>
-              {displayName}
-              <VerifiedBadge />
-            </div>
-            <div style={{
-              fontSize: 15,
-              color: isSoft ? 'rgba(26,26,46,0.5)' : 'rgba(255,255,255,0.55)',
-              marginTop: 4, fontWeight: 400,
-              textShadow: isSoft ? 'none' : '0 1px 8px rgba(0,0,0,0.4)',
-            }}>
-              @{user.username}
-            </div>
-            {/* Quick-link icon bar — selected links shown as small icons */}
-            {headerLinks.length > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginTop: 10 }}>
-                {headerLinks.map(link => {
-                  const icon = getPlatformIcon(link.url, link.icon)
-                  return (
-                    <a key={link.id}
-                      href={`/api/analytics/click?linkId=${link.id}&url=${encodeURIComponent(link.url)}`}
-                      style={{
-                        width: 34, height: 34, borderRadius: '50%',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        background: 'rgba(255,255,255,0.15)',
-                        border: '1px solid rgba(255,255,255,0.12)',
-                        backdropFilter: 'blur(8px)',
-                        transition: 'transform 0.2s, background 0.2s',
-                        cursor: 'pointer', textDecoration: 'none',
-                      }}
-                      onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.15)'; e.currentTarget.style.background = 'rgba(255,255,255,0.25)' }}
-                      onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = 'rgba(255,255,255,0.15)' }}
-                    >
-                      {icon.type === 'platform' && icon.svg ? (
-                        <span style={{ width: 17, height: 17, color: '#fff' }} dangerouslySetInnerHTML={{ __html: icon.svg }} />
-                      ) : (
-                        <span style={{ fontSize: 16 }}>{icon.emoji || link.icon}</span>
-                      )}
-                    </a>
-                  )
-                })}
+          <div style={{ position: 'relative', overflow: 'hidden' }}>
+            {avatarUrl ? (
+              <img src={avatarUrl} alt={displayName} style={{
+                width: '100%', height: 520, objectFit: 'cover', objectPosition: 'center top', display: 'block',
+              }} />
+            ) : (
+              <div style={{
+                width: '100%', height: 520,
+                background: isSoft
+                  ? 'linear-gradient(135deg, #f9a8d4, #c084fc, #93c5fd)'
+                  : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 120, fontWeight: 900, color: 'rgba(255,255,255,0.3)',
+              }}>
+                {displayName[0]?.toUpperCase()}
               </div>
             )}
-            {/* Bio lives INSIDE the hero — no orphaned text */}
-            {showBio && user.bio && (
-              <p style={{
-                color: isSoft ? 'rgba(26,26,46,0.45)' : 'rgba(255,255,255,0.5)',
-                fontSize: 13, lineHeight: 1.5,
-                marginTop: 6, padding: '0 24px',
-                textShadow: isSoft ? 'none' : '0 1px 6px rgba(0,0,0,0.3)',
-                display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+
+            {/* Dramatic bottom gradient — fades into the card background */}
+            <div style={{
+              position: 'absolute', bottom: 0, left: 0, right: 0, height: '65%',
+              background: isSoft
+                ? 'linear-gradient(to bottom, transparent 0%, rgba(255,245,250,0.05) 25%, rgba(255,245,250,0.5) 60%, #FFF5FA 100%)'
+                : 'linear-gradient(to bottom, transparent 0%, rgba(10,10,10,0.1) 25%, rgba(10,10,10,0.5) 55%, rgba(10,10,10,0.85) 80%, #0a0a0a 100%)',
+            }} />
+
+            {/* Name + badge + handle + header icons + bio overlaid on hero */}
+            <div style={{
+              position: 'absolute', bottom: 24, left: 0, right: 0,
+              textAlign: 'center', zIndex: 3,
+            }}>
+              <div style={{
+                fontSize: 36, fontWeight: 900,
+                color: isSoft ? '#1a1a2e' : '#fff',
+                letterSpacing: -0.8,
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                textShadow: isSoft ? '0 1px 12px rgba(255,255,255,0.5)' : '0 2px 20px rgba(0,0,0,0.5)',
               }}>
-                {user.bio}
-              </p>
-            )}
+                {displayName}
+                <VerifiedBadge />
+              </div>
+              <div style={{
+                fontSize: 15,
+                color: isSoft ? 'rgba(26,26,46,0.5)' : 'rgba(255,255,255,0.55)',
+                marginTop: 4, fontWeight: 400,
+                textShadow: isSoft ? 'none' : '0 1px 8px rgba(0,0,0,0.4)',
+              }}>
+                @{user.username}
+              </div>
+              {/* Quick-link icon bar */}
+              {headerLinks.length > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginTop: 10 }}>
+                  {headerLinks.map(link => {
+                    const icon = getPlatformIcon(link.url, link.icon)
+                    return (
+                      <a key={link.id}
+                        href={`/api/analytics/click?linkId=${link.id}&url=${encodeURIComponent(link.url)}`}
+                        style={{
+                          width: 34, height: 34, borderRadius: '50%',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          background: 'rgba(255,255,255,0.15)',
+                          border: '1px solid rgba(255,255,255,0.12)',
+                          backdropFilter: 'blur(8px)',
+                          transition: 'transform 0.2s, background 0.2s',
+                          cursor: 'pointer', textDecoration: 'none',
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.15)'; e.currentTarget.style.background = 'rgba(255,255,255,0.25)' }}
+                        onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = 'rgba(255,255,255,0.15)' }}
+                      >
+                        {icon.type === 'platform' && icon.svg ? (
+                          <span style={{ width: 17, height: 17, color: '#fff' }} dangerouslySetInnerHTML={{ __html: icon.svg }} />
+                        ) : (
+                          <span style={{ fontSize: 16 }}>{icon.emoji || link.icon}</span>
+                        )}
+                      </a>
+                    )
+                  })}
+                </div>
+              )}
+              {/* Bio */}
+              {showBio && user.bio && (
+                <p style={{
+                  color: isSoft ? 'rgba(26,26,46,0.45)' : 'rgba(255,255,255,0.5)',
+                  fontSize: 13, lineHeight: 1.5,
+                  marginTop: 6, padding: '0 24px',
+                  textShadow: isSoft ? 'none' : '0 1px 6px rgba(0,0,0,0.3)',
+                  display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                }}>
+                  {user.bio}
+                </p>
+              )}
+            </div>
           </div>
-        </div>
 
-        {/* ════ CONTENT BELOW HERO ════ */}
-        <div style={{ padding: '0px 8px 40px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-
-          {/* Links */}
-          <LinksSection
-            links={enabledLinks}
-            variant={variant}
-            linkStyle={user.link_style}
-          />
+          {/* ════ LINKS — inside the card, narrower than the hero ════ */}
+          <div style={{ padding: '4px 14px 32px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <LinksSection
+              links={enabledLinks}
+              variant={variant}
+              linkStyle={user.link_style}
+            />
+          </div>
         </div>
       </div>
     </div>
