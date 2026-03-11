@@ -41,6 +41,8 @@ function initDb() {
       url TEXT NOT NULL,
       icon TEXT NOT NULL DEFAULT '🔗',
       thumbnail_url TEXT,
+      card_size TEXT NOT NULL DEFAULT 'full',
+      show_in_header INTEGER NOT NULL DEFAULT 0,
       position INTEGER NOT NULL DEFAULT 0,
       enabled INTEGER NOT NULL DEFAULT 1,
       click_count INTEGER NOT NULL DEFAULT 0,

@@ -113,7 +113,7 @@ export async function PATCH(req: NextRequest) {
   }
 
   const body = await req.json()
-  const { title, url, icon, enabled, position, thumbnail_url } = body
+  const { title, url, icon, enabled, position, thumbnail_url, card_size, show_in_header } = body
 
   const updates: Partial<typeof links.$inferInsert> = {}
   if (title !== undefined) updates.title = title
@@ -122,6 +122,8 @@ export async function PATCH(req: NextRequest) {
   if (enabled !== undefined) updates.enabled = enabled
   if (position !== undefined) updates.position = position
   if (thumbnail_url !== undefined) updates.thumbnail_url = thumbnail_url || null
+  if (card_size !== undefined) updates.card_size = card_size
+  if (show_in_header !== undefined) updates.show_in_header = show_in_header
 
   const updated = db
     .update(links)

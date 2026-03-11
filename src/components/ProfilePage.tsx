@@ -21,6 +21,8 @@ type Link = {
   url: string
   icon: string
   thumbnail_url: string | null
+  card_size: 'full' | 'half'
+  show_in_header: number
   position: number
   enabled: number
   click_count: number
@@ -261,45 +263,38 @@ function LinkCard({ link, isGrid, variant, linkStyle }: {
    LINKS SECTION — list or grid layout
    ════════════════════════════════════════════ */
 
-function LinksSection({ links, variant, linkStyle, layout }: {
-  links: Link[]; variant: Variant; linkStyle: 'default' | 'overlay'; layout: 'list' | 'grid'
+function LinksSection({ links, variant, linkStyle }: {
+  links: Link[]; variant: Variant; linkStyle: 'default' | 'overlay'
 }) {
   if (links.length === 0) return null
 
-  if (layout === 'grid' && links.length > 1) {
-    const first = links[0]
-    const rest = links.slice(1)
-    // If odd number remaining, pull last one out for full-width
-    const hasOdd = rest.length % 2 === 1
-    const gridLinks = hasOdd ? rest.slice(0, -1) : rest
-    const lastLink = hasOdd ? rest[rest.length - 1] : null
-
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {/* First link always full width */}
-        <LinkCard link={first} isGrid={false} variant={variant} linkStyle={linkStyle} />
-        {/* Pairs in 2-column grid */}
-        {gridLinks.length > 0 && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-            {gridLinks.map(link => (
-              <LinkCard key={link.id} link={link} isGrid={true} variant={variant} linkStyle={linkStyle} />
-            ))}
-          </div>
-        )}
-        {/* Odd one out → full width */}
-        {lastLink && (
-          <LinkCard link={lastLink} isGrid={false} variant={variant} linkStyle={linkStyle} />
-        )}
-      </div>
-    )
+  // Build rows: consecutive 'half' links get paired, 'full' links get their own row
+  const rows: (Link | [Link, Link])[] = []
+  let i = 0
+  while (i < links.length) {
+    const link = links[i]
+    if (link.card_size === 'half' && i + 1 < links.length && links[i + 1].card_size === 'half') {
+      rows.push([link, links[i + 1]])
+      i += 2
+    } else {
+      rows.push(link)
+      i++
+    }
   }
 
-  // List layout
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      {links.map(link => (
-        <LinkCard key={link.id} link={link} isGrid={false} variant={variant} linkStyle={linkStyle} />
-      ))}
+      {rows.map((row, idx) => {
+        if (Array.isArray(row)) {
+          return (
+            <div key={`row-${idx}`} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+              <LinkCard link={row[0]} isGrid={true} variant={variant} linkStyle={linkStyle} />
+              <LinkCard link={row[1]} isGrid={true} variant={variant} linkStyle={linkStyle} />
+            </div>
+          )
+        }
+        return <LinkCard key={row.id} link={row} isGrid={false} variant={variant} linkStyle={linkStyle} />
+      })}
     </div>
   )
 }
@@ -316,6 +311,7 @@ export default function ProfilePage({ user, links }: Props) {
   const showBg = user.show_blurred_bg === 1
   const showBio = user.show_bio === 1
   const isSoft = variant === 'soft'
+  const headerLinks = enabledLinks.filter(l => l.show_in_header === 1)
 
   // Page background
   const pageBg = isSoft
@@ -436,6 +432,36 @@ export default function ProfilePage({ user, links }: Props) {
             }}>
               @{user.username}
             </div>
+            {/* Quick-link icon bar — selected links shown as small icons */}
+            {headerLinks.length > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginTop: 10 }}>
+                {headerLinks.map(link => {
+                  const icon = getPlatformIcon(link.url, link.icon)
+                  return (
+                    <a key={link.id}
+                      href={`/api/analytics/click?linkId=${link.id}&url=${encodeURIComponent(link.url)}`}
+                      style={{
+                        width: 34, height: 34, borderRadius: '50%',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: 'rgba(255,255,255,0.15)',
+                        border: '1px solid rgba(255,255,255,0.12)',
+                        backdropFilter: 'blur(8px)',
+                        transition: 'transform 0.2s, background 0.2s',
+                        cursor: 'pointer', textDecoration: 'none',
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.15)'; e.currentTarget.style.background = 'rgba(255,255,255,0.25)' }}
+                      onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = 'rgba(255,255,255,0.15)' }}
+                    >
+                      {icon.type === 'platform' && icon.svg ? (
+                        <span style={{ width: 17, height: 17, color: '#fff' }} dangerouslySetInnerHTML={{ __html: icon.svg }} />
+                      ) : (
+                        <span style={{ fontSize: 16 }}>{icon.emoji || link.icon}</span>
+                      )}
+                    </a>
+                  )
+                })}
+              </div>
+            )}
             {/* Bio lives INSIDE the hero — no orphaned text */}
             {showBio && user.bio && (
               <p style={{
@@ -459,7 +485,6 @@ export default function ProfilePage({ user, links }: Props) {
             links={enabledLinks}
             variant={variant}
             linkStyle={user.link_style}
-            layout={user.layout}
           />
         </div>
       </div>

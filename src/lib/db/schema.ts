@@ -25,6 +25,8 @@ export const links = sqliteTable('links', {
   url: text('url').notNull(),
   icon: text('icon').notNull().default('🔗'),
   thumbnail_url: text('thumbnail_url'),
+  card_size: text('card_size').notNull().default('full'),
+  show_in_header: integer('show_in_header').notNull().default(0),
   position: integer('position').notNull().default(0),
   enabled: integer('enabled').notNull().default(1),
   click_count: integer('click_count').notNull().default(0),

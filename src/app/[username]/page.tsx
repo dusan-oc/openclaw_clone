@@ -98,5 +98,10 @@ export default async function UserProfilePage({ params }: Props) {
     show_bio: user.show_bio ?? 1,
   }
 
-  return <ProfilePage user={safeUser} links={userLinks} />
+  const typedLinks = userLinks.map(l => ({
+    ...l,
+    card_size: (l.card_size === 'half' ? 'half' : 'full') as 'full' | 'half',
+  }))
+
+  return <ProfilePage user={safeUser} links={typedLinks} />
 }

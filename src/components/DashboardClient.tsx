@@ -12,6 +12,8 @@ type LinkItem = {
   url: string
   icon: string
   thumbnail_url: string | null
+  card_size: 'full' | 'half'
+  show_in_header: number
   position: number
   enabled: number
   click_count: number
@@ -101,7 +103,7 @@ export default function DashboardClient({ user: initialUser }: { user: User }) {
 
   // Inline editing
   const [editingId, setEditingId] = useState<number | null>(null)
-  const [editForm, setEditForm] = useState({ title: '', url: '', icon: '', thumbnail_url: '' })
+  const [editForm, setEditForm] = useState({ title: '', url: '', icon: '', thumbnail_url: '', card_size: 'full' as 'full' | 'half', show_in_header: 0 })
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
 
   const [saving, setSaving] = useState(false)
@@ -195,7 +197,7 @@ export default function DashboardClient({ user: initialUser }: { user: User }) {
 
   const startEdit = (link: LinkItem) => {
     setEditingId(link.id)
-    setEditForm({ title: link.title, url: link.url, icon: link.icon, thumbnail_url: link.thumbnail_url ?? '' })
+    setEditForm({ title: link.title, url: link.url, icon: link.icon, thumbnail_url: link.thumbnail_url ?? '', card_size: link.card_size ?? 'full', show_in_header: link.show_in_header ?? 0 })
   }
 
   const saveEdit = async () => {
@@ -305,6 +307,19 @@ export default function DashboardClient({ user: initialUser }: { user: User }) {
                         style={{ padding: '4px 8px', borderRadius: 4, border: `1px solid ${inputBorder}`, background: inputBg, color: '#fff', fontSize: 12, outline: 'none' }} />
                       <input type="text" value={editForm.thumbnail_url} onChange={e => setEditForm(p => ({ ...p, thumbnail_url: e.target.value }))}
                         placeholder="Thumbnail URL" style={{ padding: '4px 8px', borderRadius: 4, border: `1px solid ${inputBorder}`, background: inputBg, color: '#fff', fontSize: 11, outline: 'none' }} />
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        <select value={editForm.card_size} onChange={e => setEditForm(p => ({ ...p, card_size: e.target.value as 'full' | 'half' }))}
+                          style={{ flex: 1, padding: '4px 6px', borderRadius: 4, border: `1px solid ${inputBorder}`, background: inputBg, color: '#fff', fontSize: 11, outline: 'none' }}>
+                          <option value="full">Full width</option>
+                          <option value="half">Half width</option>
+                        </select>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#9CA3AF', cursor: 'pointer', whiteSpace: 'nowrap' as const }}>
+                          <input type="checkbox" checked={editForm.show_in_header === 1}
+                            onChange={e => setEditForm(p => ({ ...p, show_in_header: e.target.checked ? 1 : 0 }))}
+                            style={{ accentColor: accent }} />
+                          Header icon
+                        </label>
+                      </div>
                       <div style={{ display: 'flex', gap: 6 }}>
                         <button onClick={saveEdit} style={{ flex: 1, padding: '5px 0', borderRadius: 4, border: 'none', background: accent, color: '#fff', fontSize: 12, cursor: 'pointer' }}>Save</button>
                         <button onClick={() => setEditingId(null)} style={{ flex: 1, padding: '5px 0', borderRadius: 4, border: `1px solid ${inputBorder}`, background: 'none', color: '#9CA3AF', fontSize: 12, cursor: 'pointer' }}>Cancel</button>
@@ -429,15 +444,6 @@ export default function DashboardClient({ user: initialUser }: { user: User }) {
                 style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: `1px solid ${inputBorder}`, background: inputBg, color: '#fff', fontSize: 13, outline: 'none', fontFamily: 'inherit' }}>
                 <option value="overlay">Overlay</option>
                 <option value="default">Default</option>
-              </select>
-            </div>
-
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ display: 'block', fontSize: 11, fontWeight: 500, color: '#9CA3AF', marginBottom: 4, textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Grid</label>
-              <select value={settingsForm.layout} onChange={e => updateSettings(p => ({ ...p, layout: e.target.value as 'list' | 'grid' }))}
-                style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: `1px solid ${inputBorder}`, background: inputBg, color: '#fff', fontSize: 13, outline: 'none', fontFamily: 'inherit' }}>
-                <option value="list">Single Column</option>
-                <option value="grid">Two Columns</option>
               </select>
             </div>
 

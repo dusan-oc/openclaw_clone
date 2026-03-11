@@ -59,7 +59,7 @@ async function upsertUser(data: {
   return user
 }
 
-async function addLinks(userId: number, linkList: { title: string; url: string; icon: string; thumbnail_url?: string }[]) {
+async function addLinks(userId: number, linkList: { title: string; url: string; icon: string; thumbnail_url?: string; card_size?: string; show_in_header?: number }[]) {
   // Check if user already has links
   const existing = db.select().from(links).where(eq(links.user_id, userId)).all()
   if (existing.length > 0) {
@@ -75,6 +75,8 @@ async function addLinks(userId: number, linkList: { title: string; url: string; 
       url: l.url,
       icon: l.icon,
       thumbnail_url: l.thumbnail_url ?? null,
+      card_size: l.card_size ?? 'full',
+      show_in_header: l.show_in_header ?? 0,
       position: i,
       enabled: 1,
       click_count: 0,
@@ -115,10 +117,10 @@ async function main() {
 
   if (alex) {
     await addLinks(alex.id, [
-      { title: 'OnlyFans', url: 'https://onlyfans.com/alexmucci', icon: '🔥', thumbnail_url: 'https://images.unsplash.com/photo-1617137968427-85924c800a22?w=600&q=80' },
-      { title: 'Instagram', url: 'https://instagram.com/alexmucci', icon: '📸' },
-      { title: 'TikTok', url: 'https://tiktok.com/@alexmucci', icon: '🎵' },
-      { title: 'Telegram VIP', url: 'https://t.me/alexmucci_vip', icon: '✈️' },
+      { title: 'OnlyFans', url: 'https://onlyfans.com/alexmucci', icon: '🔥', thumbnail_url: 'https://images.unsplash.com/photo-1617137968427-85924c800a22?w=600&q=80', show_in_header: 1 },
+      { title: 'Instagram', url: 'https://instagram.com/alexmucci', icon: '📸', card_size: 'half', show_in_header: 1 },
+      { title: 'TikTok', url: 'https://tiktok.com/@alexmucci', icon: '🎵', card_size: 'half', show_in_header: 1 },
+      { title: 'Telegram VIP', url: 'https://t.me/alexmucci_vip', icon: '✈️', show_in_header: 1 },
     ])
   }
 
