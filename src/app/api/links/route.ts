@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
   const userId = parseInt(session.user.id)
 
   const body = await req.json()
-  const { title, url, icon } = body
+  const { title, url, icon, thumbnail_url } = body
 
   if (!title || !url) {
     return NextResponse.json({ error: 'Title and URL are required' }, { status: 400 })
@@ -57,6 +57,7 @@ export async function POST(req: NextRequest) {
       title,
       url,
       icon: icon || '🔗',
+      thumbnail_url: thumbnail_url || null,
       position,
       created_at: Math.floor(Date.now() / 1000),
     })
@@ -112,7 +113,7 @@ export async function PATCH(req: NextRequest) {
   }
 
   const body = await req.json()
-  const { title, url, icon, enabled, position } = body
+  const { title, url, icon, enabled, position, thumbnail_url } = body
 
   const updates: Partial<typeof links.$inferInsert> = {}
   if (title !== undefined) updates.title = title
@@ -120,6 +121,7 @@ export async function PATCH(req: NextRequest) {
   if (icon !== undefined) updates.icon = icon
   if (enabled !== undefined) updates.enabled = enabled
   if (position !== undefined) updates.position = position
+  if (thumbnail_url !== undefined) updates.thumbnail_url = thumbnail_url || null
 
   const updated = db
     .update(links)

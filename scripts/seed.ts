@@ -23,6 +23,7 @@ async function upsertUser(data: {
   password: string
   display_name: string
   bio?: string
+  avatar_url?: string
   role: 'user' | 'admin'
   theme: 'classic' | 'neon' | 'soft'
 }) {
@@ -39,6 +40,7 @@ async function upsertUser(data: {
     password_hash,
     display_name: data.display_name,
     bio: data.bio ?? null,
+    avatar_url: data.avatar_url ?? null,
     role: data.role,
     theme: data.theme,
     enabled: 1,
@@ -49,7 +51,7 @@ async function upsertUser(data: {
   return user
 }
 
-async function addLinks(userId: number, linkList: { title: string; url: string; icon: string }[]) {
+async function addLinks(userId: number, linkList: { title: string; url: string; icon: string; thumbnail_url?: string }[]) {
   // Check if user already has links
   const existing = db.select().from(links).where(eq(links.user_id, userId)).all()
   if (existing.length > 0) {
@@ -64,6 +66,7 @@ async function addLinks(userId: number, linkList: { title: string; url: string; 
       title: l.title,
       url: l.url,
       icon: l.icon,
+      thumbnail_url: l.thumbnail_url ?? null,
       position: i,
       enabled: 1,
       click_count: 0,
@@ -96,13 +99,14 @@ async function main() {
     password: 'Demo1234!',
     display_name: 'Alex Mucci',
     bio: '🌟 Content creator | Subscribe for exclusive content 🔥',
+    avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&q=80',
     role: 'user',
     theme: 'classic',
   })
 
   if (alex) {
     await addLinks(alex.id, [
-      { title: 'OnlyFans', url: 'https://onlyfans.com/alexmucci', icon: '🔥' },
+      { title: 'OnlyFans', url: 'https://onlyfans.com/alexmucci', icon: '🔥', thumbnail_url: 'https://images.unsplash.com/photo-1617137968427-85924c800a22?w=600&q=80' },
       { title: 'Instagram', url: 'https://instagram.com/alexmucci', icon: '📸' },
       { title: 'TikTok', url: 'https://tiktok.com/@alexmucci', icon: '🎵' },
       { title: 'Telegram VIP', url: 'https://t.me/alexmucci_vip', icon: '✈️' },

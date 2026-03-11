@@ -16,6 +16,7 @@ type Link = {
   title: string
   url: string
   icon: string
+  thumbnail_url: string | null
   position: number
   enabled: number
   click_count: number
@@ -178,6 +179,10 @@ function DarkGlassProfile({ user, links }: Props) {
                   }
                 }}
               >
+                {link.thumbnail_url && (
+                  <img src={link.thumbnail_url} alt={link.title}
+                    style={{ width: '100%', height: 160, objectFit: 'cover', display: 'block' }} />
+                )}
                 <div style={{ padding: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
                   <div style={{
                     width: 40, height: 40, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,

@@ -20,6 +20,7 @@ export const links = sqliteTable('links', {
   title: text('title').notNull(),
   url: text('url').notNull(),
   icon: text('icon').notNull().default('🔗'),
+  thumbnail_url: text('thumbnail_url'),
   position: integer('position').notNull().default(0),
   enabled: integer('enabled').notNull().default(1),
   click_count: integer('click_count').notNull().default(0),

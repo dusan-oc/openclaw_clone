@@ -36,6 +36,7 @@ function initDb() {
       title TEXT NOT NULL,
       url TEXT NOT NULL,
       icon TEXT NOT NULL DEFAULT '🔗',
+      thumbnail_url TEXT,
       position INTEGER NOT NULL DEFAULT 0,
       enabled INTEGER NOT NULL DEFAULT 1,
       click_count INTEGER NOT NULL DEFAULT 0,

@@ -10,6 +10,7 @@ type LinkItem = {
   title: string
   url: string
   icon: string
+  thumbnail_url: string | null
   position: number
   enabled: number
   click_count: number
@@ -74,6 +75,7 @@ export default function DashboardClient({ user: initialUser }: { user: User }) {
   const [newTitle, setNewTitle] = useState('')
   const [newUrl, setNewUrl] = useState('')
   const [newIcon, setNewIcon] = useState('🔗')
+  const [newThumbnail, setNewThumbnail] = useState('')
   const [addingLink, setAddingLink] = useState(false)
 
   // Settings form
@@ -89,7 +91,7 @@ export default function DashboardClient({ user: initialUser }: { user: User }) {
 
   // Inline editing (CR-011)
   const [editingId, setEditingId] = useState<number | null>(null)
-  const [editForm, setEditForm] = useState({ title: '', url: '', icon: '' })
+  const [editForm, setEditForm] = useState({ title: '', url: '', icon: '', thumbnail_url: '' })
 
   // Delete confirmation (CR-010)
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
@@ -118,12 +120,13 @@ export default function DashboardClient({ user: initialUser }: { user: User }) {
       const res = await fetch('/api/links', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: newTitle.trim(), url, icon: newIcon }),
+        body: JSON.stringify({ title: newTitle.trim(), url, icon: newIcon, thumbnail_url: newThumbnail.trim() || null }),
       })
       if (res.ok) {
         setNewTitle('')
         setNewUrl('')
         setNewIcon('🔗')
+        setNewThumbnail('')
         await fetchLinks()
       }
     } finally {
@@ -165,7 +168,7 @@ export default function DashboardClient({ user: initialUser }: { user: User }) {
 
   const startEdit = (link: LinkItem) => {
     setEditingId(link.id)
-    setEditForm({ title: link.title, url: link.url, icon: link.icon })
+    setEditForm({ title: link.title, url: link.url, icon: link.icon, thumbnail_url: link.thumbnail_url ?? '' })
   }
 
   const saveEdit = async () => {
@@ -276,6 +279,8 @@ export default function DashboardClient({ user: initialUser }: { user: User }) {
                   <input type="text" value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="Link title"
                     className="flex-1 px-4 py-3 rounded-xl border text-white placeholder-purple-400/50 outline-none" style={inputStyle} required />
                 </div>
+                <input type="text" value={newThumbnail} onChange={e => setNewThumbnail(e.target.value)} placeholder="Thumbnail image URL (optional)"
+                  className="w-full px-4 py-3 rounded-xl border text-white placeholder-purple-400/50 outline-none text-sm" style={inputStyle} />
                 <div className="flex gap-3">
                   <input type="text" value={newUrl} onChange={e => setNewUrl(e.target.value)} placeholder="https://..."
                     className="flex-1 px-4 py-3 rounded-xl border text-white placeholder-purple-400/50 outline-none" style={inputStyle} required />
@@ -313,6 +318,9 @@ export default function DashboardClient({ user: initialUser }: { user: User }) {
                         </div>
                         <input type="text" value={editForm.url} onChange={e => setEditForm(p => ({ ...p, url: e.target.value }))}
                           className="w-full px-3 py-2 rounded-lg border text-white outline-none" style={inputStyle} />
+                        <input type="text" value={editForm.thumbnail_url} onChange={e => setEditForm(p => ({ ...p, thumbnail_url: e.target.value }))}
+                          placeholder="Thumbnail image URL (optional)"
+                          className="w-full px-3 py-2 rounded-lg border text-white placeholder-purple-400/50 outline-none text-sm" style={inputStyle} />
                         <div className="flex gap-2">
                           <button onClick={saveEdit}
                             className="px-4 py-2 rounded-lg text-white text-sm font-medium"
