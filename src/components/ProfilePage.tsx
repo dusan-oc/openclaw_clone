@@ -374,7 +374,7 @@ export default function ProfilePage({ user, links }: Props) {
   const bgMode = user.bg_mode || 'blur'
 
   // Parse AI background CSS if applicable
-  let aiBgStyles: Record<string, string> = {}
+  let aiBgCss = ''
   let aiBgKeyframes = ''
   if (bgMode === 'ai' && user.bg_value) {
     try {
@@ -383,16 +383,17 @@ export default function ProfilePage({ user, links }: Props) {
         aiBgKeyframes = `@keyframes ${parsed['@keyframes']}`
         delete parsed['@keyframes']
       }
-      aiBgStyles = parsed
+      // Convert camelCase to kebab-case for CSS
+      aiBgCss = Object.entries(parsed)
+        .map(([k, v]) => `${k.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${v}`)
+        .join('; ')
     } catch { /* fallback to default */ }
   }
 
   // Page background
   const pageBg = bgMode === 'color' && user.bg_value
     ? user.bg_value
-    : bgMode === 'ai' && aiBgStyles.background
-      ? aiBgStyles.background
-      : isSoft ? '#FFF5FA' : '#000'
+    : isSoft ? '#FFF5FA' : '#000'
 
   const showBlurBg = bgMode === 'blur' && user.show_blurred_bg === 1
 
@@ -402,14 +403,12 @@ export default function ProfilePage({ user, links }: Props) {
   return (
     <>
     {warningUrl && <ContentWarningModal url={warningUrl} onClose={() => setWarningUrl(null)} />}
-    <div style={{
+    <div className={bgMode === 'ai' && aiBgCss ? 'glimr-ai-bg' : undefined} style={{
       fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
       minHeight: '100vh',
       display: 'flex', justifyContent: 'center',
       overflowX: 'hidden',
-      ...(bgMode === 'ai' && Object.keys(aiBgStyles).length > 0
-        ? aiBgStyles
-        : { background: pageBg }),
+      ...(bgMode === 'ai' && aiBgCss ? {} : { background: pageBg }),
     }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
@@ -417,6 +416,7 @@ export default function ProfilePage({ user, links }: Props) {
         body { background: ${bgMode === 'color' && user.bg_value ? user.bg_value : isSoft ? '#FFF5FA' : '#000'}; }
         ${variant === 'neon' ? `@keyframes neonPulse { 0%,100%{opacity:0.6}50%{opacity:1} }` : ''}
         ${aiBgKeyframes}
+        ${aiBgCss ? `.glimr-ai-bg { ${aiBgCss} }` : ''}
       `}</style>
 
       {/* ── Blurred Background ── */}
