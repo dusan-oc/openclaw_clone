@@ -155,6 +155,50 @@ function ImageCard({ link, isGrid, variant }: { link: Link; isGrid: boolean; var
 }
 
 /* ════════════════════════════════════════════
+   DEFAULT IMAGE CARD — image on top, text row below
+   ════════════════════════════════════════════ */
+
+function DefaultImageCard({ link, isGrid, variant }: { link: Link; isGrid: boolean; variant: Variant }) {
+  const isDark = variant !== 'soft'
+  const bg = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.7)'
+  const border = isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.06)'
+  const titleColor = isDark ? '#fff' : '#1a1a2e'
+  const subColor = isDark ? 'rgba(255,255,255,0.4)' : '#9ca3af'
+
+  return (
+    <a
+      href={`/api/analytics/click?linkId=${link.id}&url=${encodeURIComponent(link.url)}`}
+      style={{
+        display: 'block', width: '100%', borderRadius: 16, overflow: 'hidden',
+        textDecoration: 'none', cursor: 'pointer',
+        background: bg, border,
+        backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+        transition: 'transform 0.2s ease',
+      }}
+      onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)' }}
+      onMouseLeave={e => { e.currentTarget.style.transform = 'none' }}
+    >
+      <div style={{ position: 'relative' }}>
+        <img src={link.thumbnail_url!} alt={link.title}
+          style={{ width: '100%', height: isGrid ? 120 : 200, objectFit: 'cover', display: 'block' }} />
+        <PlatformBadge link={link} />
+      </div>
+      <div style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+        <CardIcon link={link} variant={variant} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: isGrid ? 13 : 15, fontWeight: 600, color: titleColor }}>{link.title}</div>
+          {!isGrid && (
+            <div style={{ fontSize: 11, color: subColor, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
+              {(() => { try { return new URL(link.url).hostname.replace('www.', '') } catch { return '' } })()}
+            </div>
+          )}
+        </div>
+      </div>
+    </a>
+  )
+}
+
+/* ════════════════════════════════════════════
    GLASS LINK CARD — no thumbnail, glassmorphism
    ════════════════════════════════════════════ */
 
@@ -204,11 +248,11 @@ function GlassCard({ link, isGrid, variant }: { link: Link; isGrid: boolean; var
 function LinkCard({ link, isGrid, variant, linkStyle }: {
   link: Link; isGrid: boolean; variant: Variant; linkStyle: 'default' | 'overlay'
 }) {
-  // If has thumbnail and overlay style → image card
-  // If has thumbnail and default style → image card (always overlay for image cards — it looks better)
-  // Actually: overlay is always better for thumbnails. Default = glass card for non-thumbnail links.
-  if (link.thumbnail_url) {
+  if (link.thumbnail_url && linkStyle === 'overlay') {
     return <ImageCard link={link} isGrid={isGrid} variant={variant} />
+  }
+  if (link.thumbnail_url && linkStyle === 'default') {
+    return <DefaultImageCard link={link} isGrid={isGrid} variant={variant} />
   }
   return <GlassCard link={link} isGrid={isGrid} variant={variant} />
 }
@@ -333,7 +377,10 @@ export default function ProfilePage({ user, links }: Props) {
         <div style={{
           position: 'relative',
           margin: '8px 8px 0 8px',
-          borderRadius: 24,
+          borderTopLeftRadius: 24,
+          borderTopRightRadius: 24,
+          borderBottomLeftRadius: 0,
+          borderBottomRightRadius: 0,
           overflow: 'hidden',
           // Subtle outer glow for depth
           boxShadow: isSoft
@@ -358,12 +405,12 @@ export default function ProfilePage({ user, links }: Props) {
             </div>
           )}
 
-          {/* Dramatic bottom gradient — long, smooth, fading to page bg */}
+          {/* Dramatic bottom gradient — fades to fully opaque so hero bleeds into content */}
           <div style={{
-            position: 'absolute', bottom: 0, left: 0, right: 0, height: '60%',
+            position: 'absolute', bottom: 0, left: 0, right: 0, height: '65%',
             background: isSoft
-              ? 'linear-gradient(to bottom, transparent 0%, rgba(255,245,250,0.05) 30%, rgba(255,245,250,0.6) 70%, rgba(255,245,250,1) 100%)'
-              : 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.15) 30%, rgba(0,0,0,0.65) 65%, rgba(0,0,0,0.92) 100%)',
+              ? 'linear-gradient(to bottom, transparent 0%, rgba(255,245,250,0.05) 25%, rgba(255,245,250,0.5) 60%, rgba(255,245,250,1) 100%)'
+              : 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.1) 25%, rgba(0,0,0,0.5) 55%, rgba(0,0,0,0.85) 80%, #000 100%)',
           }} />
 
           {/* Name + badge + handle + bio overlaid on hero */}
@@ -403,7 +450,7 @@ export default function ProfilePage({ user, links }: Props) {
         </div>
 
         {/* ════ CONTENT BELOW HERO ════ */}
-        <div style={{ padding: '6px 8px 40px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div style={{ padding: '0px 8px 40px', display: 'flex', flexDirection: 'column', gap: 6 }}>
 
           {/* Links */}
           <LinksSection

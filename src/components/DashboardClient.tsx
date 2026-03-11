@@ -105,9 +105,8 @@ export default function DashboardClient({ user: initialUser }: { user: User }) {
   const [editForm, setEditForm] = useState({ title: '', url: '', icon: '', thumbnail_url: '' })
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
 
-  // Auto-save debounce
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [saving, setSaving] = useState(false)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
 
   const refreshPreview = useCallback(() => {
     setIframeKey(k => k + 1)
@@ -120,27 +119,33 @@ export default function DashboardClient({ user: initialUser }: { user: User }) {
 
   useEffect(() => { fetchLinks() }, [fetchLinks])
 
-  // Auto-save settings on change
-  useEffect(() => {
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
-    saveTimeoutRef.current = setTimeout(async () => {
-      setSaving(true)
-      try {
-        const res = await fetch('/api/user/settings', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(settingsForm),
-        })
-        if (res.ok) {
-          const updated = await res.json()
-          setUser(prev => ({ ...prev, ...updated }))
-          refreshPreview()
-        }
-      } finally {
-        setSaving(false)
+  // Track unsaved changes
+  const updateSettings = useCallback((updater: (prev: typeof settingsForm) => typeof settingsForm) => {
+    setSettingsForm(prev => {
+      const next = updater(prev)
+      setHasUnsavedChanges(true)
+      return next
+    })
+  }, [])
+
+  // Save settings explicitly
+  const saveSettings = useCallback(async () => {
+    setSaving(true)
+    try {
+      const res = await fetch('/api/user/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settingsForm),
+      })
+      if (res.ok) {
+        const updated = await res.json()
+        setUser(prev => ({ ...prev, ...updated }))
+        setHasUnsavedChanges(false)
+        refreshPreview()
       }
-    }, 600)
-    return () => { if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current) }
+    } finally {
+      setSaving(false)
+    }
   }, [settingsForm, refreshPreview])
 
   const addLink = async (e: React.FormEvent) => {
@@ -220,7 +225,15 @@ export default function DashboardClient({ user: initialUser }: { user: User }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ width: 26, height: 26, borderRadius: 7, background: accent, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 13, fontWeight: 700 }}>G</div>
           <span style={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>Studio</span>
-          {saving && <span style={{ color: '#6B7280', fontSize: 11, marginLeft: 8 }}>Saving…</span>}
+          {hasUnsavedChanges && (
+            <button onClick={saveSettings} disabled={saving} style={{
+              marginLeft: 12, padding: '5px 16px', borderRadius: 6, border: 'none',
+              background: saving ? '#4B5563' : accent, color: '#fff', fontSize: 12, fontWeight: 600,
+              cursor: saving ? 'default' : 'pointer', transition: 'background 0.15s',
+            }}>
+              {saving ? <><Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> Saving…</> : 'Save Changes'}
+            </button>
+          )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <Link href={`/${user.username}`} target="_blank" style={{ color: '#9CA3AF', fontSize: 13, textDecoration: 'none' }}>
@@ -373,9 +386,9 @@ export default function DashboardClient({ user: initialUser }: { user: User }) {
           {/* Profile */}
           <div style={{ marginBottom: 20 }}>
             <div style={{ fontSize: 11, fontWeight: 600, color: '#6B7280', marginBottom: 10, textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Profile</div>
-            <StudioInput label="Display Name" value={settingsForm.display_name} onChange={v => setSettingsForm(p => ({ ...p, display_name: v }))} placeholder="Your Name" />
-            <StudioInput label="Bio" value={settingsForm.bio} onChange={v => setSettingsForm(p => ({ ...p, bio: v }))} placeholder="About you…" rows={3} />
-            <StudioInput label="Avatar URL" value={settingsForm.avatar_url} onChange={v => setSettingsForm(p => ({ ...p, avatar_url: v }))} placeholder="https://..." />
+            <StudioInput label="Display Name" value={settingsForm.display_name} onChange={v => updateSettings(p => ({ ...p, display_name: v }))} placeholder="Your Name" />
+            <StudioInput label="Bio" value={settingsForm.bio} onChange={v => updateSettings(p => ({ ...p, bio: v }))} placeholder="About you…" rows={3} />
+            <StudioInput label="Avatar URL" value={settingsForm.avatar_url} onChange={v => updateSettings(p => ({ ...p, avatar_url: v }))} placeholder="https://..." />
           </div>
 
           {/* Theme */}
@@ -383,7 +396,7 @@ export default function DashboardClient({ user: initialUser }: { user: User }) {
             <div style={{ fontSize: 11, fontWeight: 600, color: '#6B7280', marginBottom: 10, textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Theme</div>
             <div style={{ display: 'flex', gap: 6 }}>
               {(['classic', 'neon', 'soft'] as const).map(t => (
-                <button key={t} onClick={() => setSettingsForm(p => ({ ...p, theme: t }))} style={{
+                <button key={t} onClick={() => updateSettings(p => ({ ...p, theme: t }))} style={{
                   flex: 1, padding: '8px 4px', borderRadius: 8, border: settingsForm.theme === t ? `2px solid ${accent}` : '2px solid rgba(255,255,255,0.08)',
                   background: settingsForm.theme === t ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.03)',
                   color: settingsForm.theme === t ? '#fff' : '#9CA3AF', fontSize: 12, fontWeight: 500, cursor: 'pointer',
@@ -401,7 +414,7 @@ export default function DashboardClient({ user: initialUser }: { user: User }) {
             
             <div style={{ marginBottom: 12 }}>
               <label style={{ display: 'block', fontSize: 11, fontWeight: 500, color: '#9CA3AF', marginBottom: 4, textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Card Style</label>
-              <select value={settingsForm.link_style} onChange={e => setSettingsForm(p => ({ ...p, link_style: e.target.value as 'default' | 'overlay' }))}
+              <select value={settingsForm.link_style} onChange={e => updateSettings(p => ({ ...p, link_style: e.target.value as 'default' | 'overlay' }))}
                 style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: `1px solid ${inputBorder}`, background: inputBg, color: '#fff', fontSize: 13, outline: 'none', fontFamily: 'inherit' }}>
                 <option value="overlay">Overlay</option>
                 <option value="default">Default</option>
@@ -410,15 +423,15 @@ export default function DashboardClient({ user: initialUser }: { user: User }) {
 
             <div style={{ marginBottom: 12 }}>
               <label style={{ display: 'block', fontSize: 11, fontWeight: 500, color: '#9CA3AF', marginBottom: 4, textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Grid</label>
-              <select value={settingsForm.layout} onChange={e => setSettingsForm(p => ({ ...p, layout: e.target.value as 'list' | 'grid' }))}
+              <select value={settingsForm.layout} onChange={e => updateSettings(p => ({ ...p, layout: e.target.value as 'list' | 'grid' }))}
                 style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: `1px solid ${inputBorder}`, background: inputBg, color: '#fff', fontSize: 13, outline: 'none', fontFamily: 'inherit' }}>
                 <option value="list">Single Column</option>
                 <option value="grid">Two Columns</option>
               </select>
             </div>
 
-            <Toggle label="Blurred Background" value={!!settingsForm.show_blurred_bg} onChange={v => setSettingsForm(p => ({ ...p, show_blurred_bg: v ? 1 : 0 }))} />
-            <Toggle label="Show Bio" value={!!settingsForm.show_bio} onChange={v => setSettingsForm(p => ({ ...p, show_bio: v ? 1 : 0 }))} />
+            <Toggle label="Blurred Background" value={!!settingsForm.show_blurred_bg} onChange={v => updateSettings(p => ({ ...p, show_blurred_bg: v ? 1 : 0 }))} />
+            <Toggle label="Show Bio" value={!!settingsForm.show_bio} onChange={v => updateSettings(p => ({ ...p, show_bio: v ? 1 : 0 }))} />
           </div>
         </div>
       </div>
