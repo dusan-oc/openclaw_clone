@@ -27,6 +27,10 @@ function initDb() {
       role TEXT NOT NULL DEFAULT 'user' CHECK(role IN ('user','admin')),
       theme TEXT NOT NULL DEFAULT 'classic' CHECK(theme IN ('classic','neon','soft')),
       enabled INTEGER NOT NULL DEFAULT 1,
+      link_style TEXT NOT NULL DEFAULT 'overlay' CHECK(link_style IN ('default','overlay')),
+      layout TEXT NOT NULL DEFAULT 'list' CHECK(layout IN ('list','grid')),
+      show_blurred_bg INTEGER NOT NULL DEFAULT 1,
+      show_bio INTEGER NOT NULL DEFAULT 1,
       created_at INTEGER NOT NULL
     );
 

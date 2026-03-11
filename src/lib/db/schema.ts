@@ -11,6 +11,10 @@ export const users = sqliteTable('users', {
   role: text('role', { enum: ['user', 'admin'] }).notNull().default('user'),
   theme: text('theme', { enum: ['classic', 'neon', 'soft'] }).notNull().default('classic'),
   enabled: integer('enabled').notNull().default(1),
+  link_style: text('link_style', { enum: ['default', 'overlay'] }).notNull().default('overlay'),
+  layout: text('layout', { enum: ['list', 'grid'] }).notNull().default('list'),
+  show_blurred_bg: integer('show_blurred_bg').notNull().default(1),
+  show_bio: integer('show_bio').notNull().default(1),
   created_at: integer('created_at').notNull(),
 })
 

@@ -12,7 +12,7 @@ export async function PATCH(req: NextRequest) {
   const userId = parseInt(session.user.id)
 
   const body = await req.json()
-  const { display_name, bio, avatar_url, theme } = body
+  const { display_name, bio, avatar_url, theme, link_style, layout, show_blurred_bg, show_bio } = body
 
   const updates: Partial<typeof users.$inferInsert> = {}
   if (display_name !== undefined) updates.display_name = display_name
@@ -25,6 +25,20 @@ export async function PATCH(req: NextRequest) {
     }
     updates.theme = theme
   }
+  if (link_style !== undefined) {
+    if (!['default', 'overlay'].includes(link_style)) {
+      return NextResponse.json({ error: 'Invalid link_style' }, { status: 400 })
+    }
+    updates.link_style = link_style
+  }
+  if (layout !== undefined) {
+    if (!['list', 'grid'].includes(layout)) {
+      return NextResponse.json({ error: 'Invalid layout' }, { status: 400 })
+    }
+    updates.layout = layout
+  }
+  if (show_blurred_bg !== undefined) updates.show_blurred_bg = show_blurred_bg ? 1 : 0
+  if (show_bio !== undefined) updates.show_bio = show_bio ? 1 : 0
 
   const updated = db
     .update(users)

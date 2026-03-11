@@ -26,6 +26,10 @@ async function upsertUser(data: {
   avatar_url?: string
   role: 'user' | 'admin'
   theme: 'classic' | 'neon' | 'soft'
+  link_style?: 'default' | 'overlay'
+  layout?: 'list' | 'grid'
+  show_blurred_bg?: number
+  show_bio?: number
 }) {
   const existing = db.select().from(users).where(eq(users.email, data.email)).get()
   if (existing) {
@@ -43,6 +47,10 @@ async function upsertUser(data: {
     avatar_url: data.avatar_url ?? null,
     role: data.role,
     theme: data.theme,
+    link_style: data.link_style ?? 'overlay',
+    layout: data.layout ?? 'list',
+    show_blurred_bg: data.show_blurred_bg ?? 1,
+    show_bio: data.show_bio ?? 1,
     enabled: 1,
     created_at: Math.floor(Date.now() / 1000),
   }).returning().get()

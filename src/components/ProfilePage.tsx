@@ -9,6 +9,10 @@ type User = {
   bio: string | null
   avatar_url: string | null
   theme: 'classic' | 'neon' | 'soft'
+  link_style: 'default' | 'overlay'
+  layout: 'list' | 'grid'
+  show_blurred_bg: number
+  show_bio: number
 }
 
 type Link = {
@@ -26,6 +30,8 @@ type Props = {
   user: User
   links: Link[]
 }
+
+type Variant = 'dark' | 'neon' | 'soft'
 
 /* ── Helpers ── */
 
@@ -46,28 +52,36 @@ function getDomain(url: string) {
   try { return new URL(url).hostname.replace('www.', '') } catch { return url }
 }
 
-/* ── Link Card Icon ── */
-function CardIcon({ link, variant }: { link: Link; variant: 'dark' | 'neon' | 'soft' }) {
+/* ── Platform Badge (top-left of image cards) ── */
+function PlatformBadge({ link }: { link: Link }) {
+  const icon = getPlatformIcon(link.url, link.icon)
+  if (icon.type !== 'platform' || !icon.svg) return null
+
+  return (
+    <div style={{
+      position: 'absolute', top: 10, left: 10, zIndex: 5,
+      width: 28, height: 28, borderRadius: '50%',
+      background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      <span style={{ width: 14, height: 14, color: '#fff' }} dangerouslySetInnerHTML={{ __html: icon.svg }} />
+    </div>
+  )
+}
+
+/* ── Card Icon (for non-thumbnail cards) ── */
+function CardIcon({ link, variant }: { link: Link; variant: Variant }) {
   const icon = getPlatformIcon(link.url, link.icon)
   const SOCIAL_BACKGROUNDS: Record<string, string> = {
     instagram: 'linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045)',
-    tiktok: '#000',
-    x: '#000',
-    youtube: '#FF0000',
-    telegram: '#26A5E4',
-    spotify: '#1DB954',
-    twitch: '#9146FF',
-    snapchat: '#FFFC00',
-    onlyfans: '#00AFF0',
-    fansly: '#1FA7F2',
-    patreon: '#FF424D',
-    threads: '#000',
+    tiktok: '#000', x: '#000', youtube: '#FF0000', telegram: '#26A5E4',
+    spotify: '#1DB954', twitch: '#9146FF', snapchat: '#FFFC00',
+    onlyfans: '#00AFF0', fansly: '#1FA7F2', patreon: '#FF424D', threads: '#000',
   }
-  const needsBorder = (p: string) => ['tiktok', 'x', 'threads'].includes(p)
-
   const bg = icon.type === 'platform'
     ? (SOCIAL_BACKGROUNDS[icon.platform!] || icon.color!)
     : variant === 'soft' ? 'linear-gradient(135deg, #f9a8d4, #c084fc)' : 'rgba(255,255,255,0.1)'
+  const needsBorder = (p: string) => ['tiktok', 'x', 'threads'].includes(p)
   const border = icon.type === 'platform' && needsBorder(icon.platform!)
     ? (variant === 'soft' ? '1px solid rgba(0,0,0,0.08)' : '1px solid rgba(255,255,255,0.15)')
     : 'none'
@@ -86,106 +100,153 @@ function CardIcon({ link, variant }: { link: Link; variant: 'dark' | 'neon' | 's
   )
 }
 
-/* ── Link Card (shared across themes) ── */
-function LinkCard({ link, index, variant }: { link: Link; index: number; variant: 'dark' | 'neon' | 'soft' }) {
-  const isPrimary = index === 0
+/* ── Link Card ── */
+function LinkCard({ link, index, variant, linkStyle, isGrid }: {
+  link: Link; index: number; variant: Variant; linkStyle: 'default' | 'overlay'; isGrid: boolean
+}) {
+  const isPrimary = index === 0 && !isGrid
   const hasThumbnail = !!link.thumbnail_url
+  const useOverlay = linkStyle === 'overlay' && hasThumbnail
+  const cardHeight = isGrid ? 140 : (hasThumbnail ? (useOverlay ? 240 : undefined) : undefined)
 
-  // Theme-specific styles
-  const cardBg = variant === 'soft'
-    ? (isPrimary ? 'linear-gradient(135deg, rgba(192,132,252,0.08), rgba(249,168,212,0.08))' : 'rgba(255,255,255,0.85)')
-    : variant === 'neon' ? 'rgba(168,85,247,0.06)' : 'rgba(255,255,255,0.06)'
-  const cardBorder = variant === 'soft'
-    ? (isPrimary ? '1px solid rgba(192,132,252,0.3)' : '1px solid rgba(0,0,0,0.06)')
+  // Theme-specific
+  const glassCardBg = variant === 'soft'
+    ? 'rgba(255,255,255,0.45)' : variant === 'neon' ? 'rgba(168,85,247,0.1)' : 'rgba(255,255,255,0.07)'
+  const glassCardBorder = variant === 'soft'
+    ? '1px solid rgba(255,255,255,0.5)' : variant === 'neon'
+      ? (isPrimary ? '1px solid rgba(168,85,247,0.5)' : '1px solid rgba(168,85,247,0.2)')
+      : '1px solid rgba(255,255,255,0.12)'
+  const glassCardShadow = variant === 'soft'
+    ? '0 4px 24px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04)'
     : variant === 'neon'
-      ? (isPrimary ? '1px solid rgba(168,85,247,0.5)' : '1px solid rgba(168,85,247,0.15)')
-      : (isPrimary ? '1px solid rgba(139,92,246,0.3)' : '1px solid rgba(255,255,255,0.08)')
+      ? (isPrimary ? '0 0 30px rgba(168,85,247,0.15)' : '0 2px 12px rgba(0,0,0,0.2)')
+      : '0 2px 16px rgba(0,0,0,0.2)'
   const titleColor = variant === 'soft' ? '#1a1a2e' : '#fff'
-  const subtitleColor = variant === 'soft' ? '#9ca3af' : variant === 'neon' ? 'rgba(196,181,253,0.6)' : 'rgba(255,255,255,0.45)'
-  const shadowPrimary = variant === 'soft'
-    ? '0 4px 24px rgba(192,132,252,0.2), 0 2px 8px rgba(0,0,0,0.04)'
-    : variant === 'neon'
-      ? '0 0 30px rgba(168,85,247,0.15), 0 0 60px rgba(168,85,247,0.05)'
-      : '0 0 30px rgba(139,92,246,0.1), 0 0 60px rgba(236,72,153,0.05)'
-  const shadowDefault = variant === 'soft' ? '0 2px 12px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04)' : 'none'
+  const subtitleColor = variant === 'soft' ? '#9ca3af' : 'rgba(255,255,255,0.45)'
 
-  return (
-    <a
-      href={`/api/analytics/click?linkId=${link.id}&url=${encodeURIComponent(link.url)}`}
-      style={{
-        position: 'relative', width: '100%', borderRadius: 16, overflow: 'hidden', cursor: 'pointer',
-        transition: 'transform 0.2s, box-shadow 0.2s, border-color 0.2s', textDecoration: 'none',
-        display: 'block',
-        background: cardBg,
-        border: cardBorder,
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        boxShadow: isPrimary ? shadowPrimary : shadowDefault,
-        animation: (variant === 'neon' && isPrimary) ? 'neonGlow 3s ease-in-out infinite' : undefined,
-      }}
-      onMouseEnter={e => {
-        e.currentTarget.style.transform = 'translateY(-2px)'
-        e.currentTarget.style.boxShadow = variant === 'soft'
-          ? '0 8px 32px rgba(192,132,252,0.25), 0 2px 8px rgba(0,0,0,0.06)'
-          : '0 0 40px rgba(139,92,246,0.2), 0 0 80px rgba(236,72,153,0.1)'
-      }}
-      onMouseLeave={e => {
-        e.currentTarget.style.transform = 'translateY(0)'
-        e.currentTarget.style.boxShadow = isPrimary ? shadowPrimary : shadowDefault
-      }}
-    >
-      {/* Thumbnail image — tall visual card */}
-      {hasThumbnail && (
-        <div style={{ position: 'relative' }}>
-          <img src={link.thumbnail_url!} alt={link.title}
-            style={{ width: '100%', height: 220, objectFit: 'cover', display: 'block' }} />
-          {/* Gradient overlay on thumbnail bottom */}
+  const neonShadow = variant === 'neon' && isPrimary
+    ? '0 0 30px rgba(168,85,247,0.15), 0 0 60px rgba(168,85,247,0.05)' : 'none'
+
+  if (useOverlay) {
+    // Overlay style: text on top of image with gradient
+    return (
+      <a
+        href={`/api/analytics/click?linkId=${link.id}&url=${encodeURIComponent(link.url)}`}
+        style={{
+          position: 'relative', display: 'block', width: '100%',
+          height: cardHeight, borderRadius: 14, overflow: 'hidden',
+          textDecoration: 'none', cursor: 'pointer',
+          boxShadow: neonShadow,
+          border: variant === 'neon' ? glassCardBorder : 'none',
+          transition: 'transform 0.2s',
+        }}
+        onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px) scale(1.01)' }}
+        onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0) scale(1)' }}
+      >
+        <img src={link.thumbnail_url!} alt={link.title}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+        <PlatformBadge link={link} />
+        {/* Gradient overlay */}
+        <div style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0, height: '60%',
+          background: 'linear-gradient(transparent 0%, rgba(0,0,0,0.75) 100%)',
+        }} />
+        {/* Text */}
+        <div style={{
+          position: 'absolute', bottom: 12, left: 14, right: 14, zIndex: 3,
+        }}>
           <div style={{
-            position: 'absolute', bottom: 0, left: 0, right: 0, height: 80,
-            background: variant === 'soft'
-              ? 'linear-gradient(transparent, rgba(255,255,255,0.9))'
-              : 'linear-gradient(transparent, rgba(0,0,0,0.7))',
-          }} />
-          {/* Platform icon overlay top-left */}
-          <div style={{ position: 'absolute', top: 12, left: 12 }}>
-            <CardIcon link={link} variant={variant} />
-          </div>
-        </div>
-      )}
-
-      {/* Card body */}
-      <div style={{
-        padding: hasThumbnail ? '12px 16px 16px' : '22px 16px',
-        display: 'flex', alignItems: 'center', gap: 14,
-        minHeight: hasThumbnail ? undefined : 76,
-      }}>
-        {/* Icon only shown if no thumbnail */}
-        {!hasThumbnail && <CardIcon link={link} variant={variant} />}
-
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{
-            fontSize: hasThumbnail ? 16 : 15, fontWeight: 600, color: titleColor,
+            fontSize: isGrid ? 13 : 16, fontWeight: 700, color: '#fff',
+            textShadow: '0 1px 8px rgba(0,0,0,0.6)',
             display: 'flex', alignItems: 'center', gap: 8,
           }}>
             {link.title}
-            {/* Subtle NEW badge — only on primary */}
             {isPrimary && (
               <span style={{
-                fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 20,
-                background: variant === 'soft'
-                  ? 'linear-gradient(135deg, #c084fc, #f9a8d4)'
-                  : 'linear-gradient(135deg, #8B5CF6, #EC4899)',
+                fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 20,
+                background: 'linear-gradient(135deg, #8B5CF6, #EC4899)',
                 color: '#fff', letterSpacing: 0.5, textTransform: 'uppercase' as const,
               }}>NEW</span>
             )}
           </div>
-          <div style={{
-            fontSize: 12, color: subtitleColor, marginTop: 2,
-            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const,
-          }}>
-            {getDomain(link.url)}
+        </div>
+      </a>
+    )
+  }
+
+  if (hasThumbnail && linkStyle === 'default') {
+    // Default style: image above, text below
+    return (
+      <a
+        href={`/api/analytics/click?linkId=${link.id}&url=${encodeURIComponent(link.url)}`}
+        style={{
+          position: 'relative', display: 'block', width: '100%', borderRadius: 14, overflow: 'hidden',
+          textDecoration: 'none', cursor: 'pointer',
+          background: glassCardBg, border: glassCardBorder,
+          backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+          boxShadow: isPrimary && variant === 'neon' ? neonShadow : glassCardShadow,
+          transition: 'transform 0.2s',
+        }}
+        onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)' }}
+        onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)' }}
+      >
+        <div style={{ position: 'relative' }}>
+          <img src={link.thumbnail_url!} alt={link.title}
+            style={{ width: '100%', height: isGrid ? 100 : 220, objectFit: 'cover', display: 'block' }} />
+          <PlatformBadge link={link} />
+        </div>
+        <div style={{ padding: '12px 16px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: isGrid ? 13 : 15, fontWeight: 600, color: titleColor, display: 'flex', alignItems: 'center', gap: 8 }}>
+              {link.title}
+              {isPrimary && (
+                <span style={{
+                  fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 20,
+                  background: 'linear-gradient(135deg, #8B5CF6, #EC4899)',
+                  color: '#fff', letterSpacing: 0.5, textTransform: 'uppercase' as const,
+                }}>NEW</span>
+              )}
+            </div>
+            <div style={{ fontSize: 11, color: subtitleColor, marginTop: 2 }}>{getDomain(link.url)}</div>
           </div>
         </div>
+      </a>
+    )
+  }
+
+  // No thumbnail: glassmorphism card
+  return (
+    <a
+      href={`/api/analytics/click?linkId=${link.id}&url=${encodeURIComponent(link.url)}`}
+      style={{
+        position: 'relative', display: 'flex', alignItems: 'center', gap: 14,
+        width: '100%', borderRadius: 14, overflow: 'hidden',
+        textDecoration: 'none', cursor: 'pointer',
+        padding: '18px 16px', minHeight: isGrid ? 60 : 72,
+        background: glassCardBg, border: glassCardBorder,
+        backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+        boxShadow: isPrimary && variant === 'neon' ? neonShadow : glassCardShadow,
+        transition: 'transform 0.2s',
+      }}
+      onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)' }}
+      onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)' }}
+    >
+      <CardIcon link={link} variant={variant} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: isGrid ? 13 : 15, fontWeight: 600, color: titleColor, display: 'flex', alignItems: 'center', gap: 8 }}>
+          {link.title}
+          {isPrimary && (
+            <span style={{
+              fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 20,
+              background: 'linear-gradient(135deg, #8B5CF6, #EC4899)',
+              color: '#fff', letterSpacing: 0.5, textTransform: 'uppercase' as const,
+            }}>NEW</span>
+          )}
+        </div>
+        <div style={{
+          fontSize: 11, color: subtitleColor, marginTop: 2,
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const,
+        }}>{getDomain(link.url)}</div>
       </div>
     </a>
   )
@@ -194,7 +255,7 @@ function LinkCard({ link, index, variant }: { link: Link; index: number; variant
 /* ── Social Icons Row ── */
 function SocialIcons({ socials, variant }: {
   socials: { platform: string; svg: string; url: string }[];
-  variant: 'dark' | 'neon' | 'soft'
+  variant: Variant
 }) {
   if (socials.length === 0) return null
   const iconBg = variant === 'soft' ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.12)'
@@ -209,16 +270,10 @@ function SocialIcons({ socials, variant }: {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             background: iconBg,
             border: variant !== 'soft' ? '1px solid rgba(255,255,255,0.08)' : 'none',
-            transition: 'transform 0.2s, background 0.2s', cursor: 'pointer', textDecoration: 'none',
+            transition: 'transform 0.2s', cursor: 'pointer', textDecoration: 'none',
           }}
-          onMouseEnter={e => {
-            e.currentTarget.style.transform = 'scale(1.15)'
-            e.currentTarget.style.background = variant === 'soft' ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.2)'
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.transform = 'scale(1)'
-            e.currentTarget.style.background = iconBg
-          }}
+          onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.15)' }}
+          onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)' }}
         >
           <span style={{ width: 15, height: 15, color: iconColor }} dangerouslySetInnerHTML={{ __html: s.svg }} />
         </a>
@@ -228,7 +283,7 @@ function SocialIcons({ socials, variant }: {
 }
 
 /* ── Verified Badge ── */
-function VerifiedBadge({ variant }: { variant: 'dark' | 'neon' | 'soft' }) {
+function VerifiedBadge({ variant }: { variant: Variant }) {
   const bg = variant === 'neon'
     ? 'linear-gradient(135deg, #A855F7, #06b6d4)'
     : variant === 'soft'
@@ -247,21 +302,21 @@ function VerifiedBadge({ variant }: { variant: 'dark' | 'neon' | 'soft' }) {
 function HeroSection({ user, displayName, socials, variant }: {
   user: User; displayName: string;
   socials: { platform: string; color: string; svg: string; url: string }[];
-  variant: 'dark' | 'neon' | 'soft'
+  variant: Variant
 }) {
   const avatarUrl = user.avatar_url || ''
-  const nameColor = variant === 'soft' ? '#1a1a2e' : '#fff'
-  const usernameColor = variant === 'soft' ? 'rgba(0,0,0,0.4)' : 'rgba(255,255,255,0.5)'
+  const nameColor = '#fff'
+  const usernameColor = 'rgba(255,255,255,0.5)'
   const gradientEnd = variant === 'soft' ? 'rgba(255,245,250,1)' : 'rgba(0,0,0,0.98)'
   const gradientMid = variant === 'soft' ? 'rgba(255,245,250,0.0)' : 'rgba(0,0,0,0.0)'
 
   return (
-    <div style={{ width: '100%', position: 'relative', overflow: 'hidden', borderRadius: variant === 'soft' ? '0 0 28px 28px' : undefined }}>
+    <div style={{ width: '100%', position: 'relative', overflow: 'hidden' }}>
       {avatarUrl ? (
-        <img src={avatarUrl} alt={displayName} style={{ width: '100%', height: 520, objectFit: 'cover', objectPosition: 'center top', display: 'block' }} />
+        <img src={avatarUrl} alt={displayName} style={{ width: '100%', height: 480, objectFit: 'cover', objectPosition: 'center top', display: 'block' }} />
       ) : (
         <div style={{
-          width: '100%', height: 520,
+          width: '100%', height: 480,
           background: variant === 'soft' ? 'linear-gradient(135deg, #f9a8d4, #c084fc, #93c5fd)' : 'linear-gradient(135deg, #8B5CF6, #EC4899)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 96, fontWeight: 800, color: '#fff',
         }}>
@@ -269,7 +324,7 @@ function HeroSection({ user, displayName, socials, variant }: {
         </div>
       )}
 
-      {/* Long smooth gradient — starts at 50% down */}
+      {/* Long smooth gradient */}
       <div style={{
         position: 'absolute', bottom: 0, left: 0, right: 0, height: '65%',
         background: `linear-gradient(to bottom, transparent 0%, ${gradientMid} 40%, ${gradientEnd} 100%)`,
@@ -280,12 +335,12 @@ function HeroSection({ user, displayName, socials, variant }: {
         <div style={{
           fontSize: 30, fontWeight: 800, color: nameColor, letterSpacing: -0.5,
           display: 'inline-flex', alignItems: 'center', gap: 8,
-          textShadow: variant === 'soft' ? 'none' : '0 2px 12px rgba(0,0,0,0.5)',
+          textShadow: '0 2px 12px rgba(0,0,0,0.5)',
         }}>
           {displayName}
           <VerifiedBadge variant={variant} />
         </div>
-        <div style={{ fontSize: 14, color: usernameColor, marginTop: 2, fontWeight: 400 }}>@{user.username}</div>
+        <div style={{ fontSize: 14, color: usernameColor, marginTop: 2, fontWeight: 400, textShadow: '0 1px 6px rgba(0,0,0,0.4)' }}>@{user.username}</div>
         <SocialIcons socials={socials} variant={variant} />
       </div>
     </div>
@@ -293,7 +348,7 @@ function HeroSection({ user, displayName, socials, variant }: {
 }
 
 /* ── Blurred Background ── */
-function BlurredBackground({ avatarUrl, variant }: { avatarUrl: string; variant: 'dark' | 'neon' | 'soft' }) {
+function BlurredBackground({ avatarUrl, variant }: { avatarUrl: string; variant: Variant }) {
   if (!avatarUrl) return null
 
   if (variant === 'soft') {
@@ -314,107 +369,92 @@ function BlurredBackground({ avatarUrl, variant }: { avatarUrl: string; variant:
         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
         backgroundImage: `url(${avatarUrl})`,
         backgroundSize: 'cover', backgroundPosition: 'center top',
-        filter: `blur(60px) brightness(${variant === 'neon' ? 0.25 : 0.35}) saturate(1.3)`,
-        transform: 'scale(1.2)', zIndex: 0,
+        filter: `blur(50px) brightness(${variant === 'neon' ? 0.25 : 0.35}) saturate(1.4)`,
+        transform: 'scale(1.25)', zIndex: 0,
       }} />
       <div style={{
         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-        background: 'linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.7) 60%, rgba(0,0,0,0.95) 100%)',
+        background: 'linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0.8) 100%)',
         zIndex: 1,
       }} />
     </>
   )
 }
 
-/* ── Dark Glass (Classic) ── */
+/* ── Links Section with Grid/List layout ── */
+function LinksSection({ links, variant, linkStyle, layout }: {
+  links: Link[]; variant: Variant; linkStyle: 'default' | 'overlay'; layout: 'list' | 'grid'
+}) {
+  if (links.length === 0) return null
 
-function DarkGlassProfile({ user, links }: Props) {
-  const socials = extractSocialIcons(links)
-  const displayName = user.display_name ?? user.username
-
-  return (
-    <div style={{ fontFamily: "'Inter', -apple-system, sans-serif", background: '#0a0a0a', minHeight: '100vh', display: 'flex', justifyContent: 'center', overflowX: 'hidden' }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-      `}</style>
-
-      <BlurredBackground avatarUrl={user.avatar_url || ''} variant="dark" />
-
-      <div style={{ position: 'relative', zIndex: 2, width: '100%', maxWidth: 440, minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <HeroSection user={user} displayName={displayName} socials={socials} variant="dark" />
-
-        <div style={{ width: '100%', padding: '12px 16px 40px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {user.bio && (
-            <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.6)', fontSize: 13, lineHeight: 1.5, marginBottom: 4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{user.bio}</p>
-          )}
-
-          {links.map((link, i) => (
-            <LinkCard key={link.id} link={link} index={i} variant="dark" />
+  if (layout === 'grid' && links.length > 1) {
+    const firstLink = links[0]
+    const restLinks = links.slice(1)
+    return (
+      <>
+        {/* First link: full width */}
+        <LinkCard link={firstLink} index={0} variant={variant} linkStyle={linkStyle} isGrid={false} />
+        {/* Remaining: 2-column grid */}
+        <div style={{
+          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10,
+        }}>
+          {restLinks.map((link, i) => (
+            <LinkCard key={link.id} link={link} index={i + 1} variant={variant} linkStyle={linkStyle} isGrid={true} />
           ))}
         </div>
-      </div>
-    </div>
+      </>
+    )
+  }
+
+  return (
+    <>
+      {links.map((link, i) => (
+        <LinkCard key={link.id} link={link} index={i} variant={variant} linkStyle={linkStyle} isGrid={false} />
+      ))}
+    </>
   )
 }
 
-/* ── Neon ── */
-
-function NeonProfile({ user, links }: Props) {
-  const socials = extractSocialIcons(links)
+/* ── Main Profile ── */
+function ProfileLayout({ user, links: enabledLinks, variant }: Props & { variant: Variant }) {
+  const socials = extractSocialIcons(enabledLinks)
   const displayName = user.display_name ?? user.username
+  const showBg = user.show_blurred_bg === 1
+  const showBio = user.show_bio === 1
+
+  const pageBg = variant === 'soft'
+    ? 'linear-gradient(180deg, #FFF5FA 0%, #FDF4FF 30%, #F5F3FF 100%)'
+    : '#0a0a0a'
+
+  const bioColor = variant === 'soft' ? '#6b7280' : variant === 'neon' ? '#c4b5fd' : 'rgba(255,255,255,0.6)'
 
   return (
-    <div style={{ fontFamily: "'Inter', -apple-system, sans-serif", background: '#000', minHeight: '100vh', display: 'flex', justifyContent: 'center', overflowX: 'hidden' }}>
+    <div style={{ fontFamily: "'Inter', -apple-system, sans-serif", background: pageBg, minHeight: '100vh', display: 'flex', justifyContent: 'center', overflowX: 'hidden' }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-        @keyframes neonGlow {
-          0%, 100% { box-shadow: 0 0 8px rgba(168,85,247,0.3), 0 0 20px rgba(168,85,247,0.1); }
-          50% { box-shadow: 0 0 16px rgba(168,85,247,0.5), 0 0 40px rgba(168,85,247,0.2); }
-        }
+        ${variant === 'neon' ? `@keyframes neonGlow { 0%,100%{box-shadow:0 0 8px rgba(168,85,247,0.3),0 0 20px rgba(168,85,247,0.1);}50%{box-shadow:0 0 16px rgba(168,85,247,0.5),0 0 40px rgba(168,85,247,0.2);}}` : ''}
+        * { box-sizing: border-box; }
       `}</style>
 
-      <BlurredBackground avatarUrl={user.avatar_url || ''} variant="neon" />
+      {showBg && <BlurredBackground avatarUrl={user.avatar_url || ''} variant={variant} />}
 
       <div style={{ position: 'relative', zIndex: 2, width: '100%', maxWidth: 440, minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <HeroSection user={user} displayName={displayName} socials={socials} variant="neon" />
+        <HeroSection user={user} displayName={displayName} socials={socials} variant={variant} />
 
-        <div style={{ width: '100%', padding: '12px 16px 40px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {user.bio && (
-            <p style={{ textAlign: 'center', color: '#c4b5fd', fontSize: 13, lineHeight: 1.5, marginBottom: 4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{user.bio}</p>
+        <div style={{ width: '100%', padding: '12px 16px 40px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {showBio && user.bio && (
+            <p style={{
+              textAlign: 'center', color: bioColor, fontSize: 13, lineHeight: 1.5,
+              marginBottom: 4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+            }}>{user.bio}</p>
           )}
 
-          {links.map((link, i) => (
-            <LinkCard key={link.id} link={link} index={i} variant="neon" />
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-/* ── Soft ── */
-
-function SoftProfile({ user, links }: Props) {
-  const socials = extractSocialIcons(links)
-  const displayName = user.display_name ?? user.username
-
-  return (
-    <div style={{ fontFamily: "'Inter', -apple-system, sans-serif", background: 'linear-gradient(180deg, #FFF5FA 0%, #FDF4FF 30%, #F5F3FF 100%)', minHeight: '100vh', display: 'flex', justifyContent: 'center', overflowX: 'hidden' }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');`}</style>
-
-      <BlurredBackground avatarUrl={user.avatar_url || ''} variant="soft" />
-
-      <div style={{ position: 'relative', zIndex: 2, width: '100%', maxWidth: 440, minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <HeroSection user={user} displayName={displayName} socials={socials} variant="soft" />
-
-        <div style={{ width: '100%', padding: '12px 16px 40px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {user.bio && (
-            <p style={{ textAlign: 'center', color: '#6b7280', fontSize: 13, lineHeight: 1.5, marginBottom: 4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{user.bio}</p>
-          )}
-
-          {links.map((link, i) => (
-            <LinkCard key={link.id} link={link} index={i} variant="soft" />
-          ))}
+          <LinksSection
+            links={enabledLinks}
+            variant={variant}
+            linkStyle={user.link_style}
+            layout={user.layout}
+          />
         </div>
       </div>
     </div>
@@ -422,11 +462,8 @@ function SoftProfile({ user, links }: Props) {
 }
 
 /* ── Main Export ── */
-
 export default function ProfilePage({ user, links }: Props) {
   const enabledLinks = links.filter(l => l.enabled === 1)
-
-  if (user.theme === 'neon') return <NeonProfile user={user} links={enabledLinks} />
-  if (user.theme === 'soft') return <SoftProfile user={user} links={enabledLinks} />
-  return <DarkGlassProfile user={user} links={enabledLinks} />
+  const variant: Variant = user.theme === 'neon' ? 'neon' : user.theme === 'soft' ? 'soft' : 'dark'
+  return <ProfileLayout user={user} links={enabledLinks} variant={variant} />
 }

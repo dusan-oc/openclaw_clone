@@ -23,6 +23,10 @@ type User = {
   bio: string | null
   avatar_url: string | null
   theme: 'classic' | 'neon' | 'soft'
+  link_style: 'default' | 'overlay'
+  layout: 'list' | 'grid'
+  show_blurred_bg: number
+  show_bio: number
 }
 
 type Tab = 'links' | 'settings' | 'analytics'
@@ -84,7 +88,12 @@ export default function DashboardClient({ user: initialUser }: { user: User }) {
     bio: initialUser.bio ?? '',
     avatar_url: initialUser.avatar_url ?? '',
     theme: initialUser.theme,
+    link_style: initialUser.link_style ?? 'overlay' as const,
+    layout: initialUser.layout ?? 'list' as const,
+    show_blurred_bg: initialUser.show_blurred_bg ?? 1,
+    show_bio: initialUser.show_bio ?? 1,
   })
+  const [previewKey, setPreviewKey] = useState(0)
   const [savingSettings, setSavingSettings] = useState(false)
   const [settingsSaved, setSettingsSaved] = useState(false)
   const [linkCopied, setLinkCopied] = useState(false)
@@ -194,6 +203,7 @@ export default function DashboardClient({ user: initialUser }: { user: User }) {
         const updated = await res.json()
         setUser({ ...user, ...updated })
         setSettingsSaved(true)
+        setPreviewKey(k => k + 1)
         setTimeout(() => setSettingsSaved(false), 2000)
       }
     } finally {
@@ -453,6 +463,63 @@ export default function DashboardClient({ user: initialUser }: { user: User }) {
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Page Layout Settings */}
+            <div className="rounded-2xl border border-purple-900/50 p-6" style={{ background: 'rgba(26, 16, 48, 0.8)' }}>
+              <h2 className="text-white font-semibold mb-4">Page Layout</h2>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-purple-200 mb-2">Link Card Style</label>
+                  <select value={settingsForm.link_style}
+                    onChange={e => setSettingsForm(p => ({ ...p, link_style: e.target.value as 'default' | 'overlay' }))}
+                    className="w-full px-4 py-3 rounded-xl border text-white outline-none appearance-none" style={inputStyle}>
+                    <option value="overlay">Overlay (text on image)</option>
+                    <option value="default">Default (text below image)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-purple-200 mb-2">Layout</label>
+                  <select value={settingsForm.layout}
+                    onChange={e => setSettingsForm(p => ({ ...p, layout: e.target.value as 'list' | 'grid' }))}
+                    className="w-full px-4 py-3 rounded-xl border text-white outline-none appearance-none" style={inputStyle}>
+                    <option value="list">Single Column (list)</option>
+                    <option value="grid">Two-Column Grid</option>
+                  </select>
+                </div>
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-purple-200">Blurred Background</label>
+                  <button onClick={() => setSettingsForm(p => ({ ...p, show_blurred_bg: p.show_blurred_bg ? 0 : 1 }))}
+                    className="w-10 h-6 rounded-full transition-all flex items-center px-1"
+                    style={{ background: settingsForm.show_blurred_bg ? 'linear-gradient(135deg, #8B5CF6, #EC4899)' : 'rgba(139, 92, 246, 0.2)' }}>
+                    <span className="w-4 h-4 rounded-full bg-white transition-transform"
+                      style={{ transform: settingsForm.show_blurred_bg ? 'translateX(16px)' : 'translateX(0)' }} />
+                  </button>
+                </div>
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-purple-200">Show Bio</label>
+                  <button onClick={() => setSettingsForm(p => ({ ...p, show_bio: p.show_bio ? 0 : 1 }))}
+                    className="w-10 h-6 rounded-full transition-all flex items-center px-1"
+                    style={{ background: settingsForm.show_bio ? 'linear-gradient(135deg, #8B5CF6, #EC4899)' : 'rgba(139, 92, 246, 0.2)' }}>
+                    <span className="w-4 h-4 rounded-full bg-white transition-transform"
+                      style={{ transform: settingsForm.show_bio ? 'translateX(16px)' : 'translateX(0)' }} />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Live Preview */}
+            <div className="rounded-2xl border border-purple-900/50 p-6" style={{ background: 'rgba(26, 16, 48, 0.8)' }}>
+              <h2 className="text-white font-semibold mb-4">Live Preview</h2>
+              <div className="rounded-xl overflow-hidden border border-purple-900/30" style={{ height: 500 }}>
+                <iframe
+                  key={previewKey}
+                  src={`/${user.username}`}
+                  style={{ width: '100%', height: '100%', border: 'none', borderRadius: 12 }}
+                  title="Profile Preview"
+                />
+              </div>
+              <p className="text-purple-400 text-xs mt-2 text-center">Save settings to update preview</p>
             </div>
 
             <div className="flex gap-3">

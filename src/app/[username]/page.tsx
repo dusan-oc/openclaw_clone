@@ -92,6 +92,10 @@ export default async function UserProfilePage({ params }: Props) {
     bio: user.bio,
     avatar_url: user.avatar_url,
     theme: user.theme,
+    link_style: user.link_style ?? 'overlay' as const,
+    layout: user.layout ?? 'list' as const,
+    show_blurred_bg: user.show_blurred_bg ?? 1,
+    show_bio: user.show_bio ?? 1,
   }
 
   return <ProfilePage user={safeUser} links={userLinks} />
