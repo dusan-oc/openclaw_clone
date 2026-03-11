@@ -347,15 +347,15 @@ export default function ProfilePage({ user, links }: Props) {
             backgroundImage: `url(${avatarUrl})`,
             backgroundSize: 'cover', backgroundPosition: 'center top',
             filter: isSoft
-              ? 'blur(80px) brightness(1.3) saturate(0.3)'
-              : `blur(60px) brightness(${variant === 'neon' ? 0.2 : 0.3}) saturate(1.5)`,
+              ? 'blur(60px) brightness(1.3) saturate(0.4)'
+              : `blur(40px) brightness(${variant === 'neon' ? 0.45 : 0.55}) saturate(1.6)`,
             transform: 'scale(1.3)',
             zIndex: 0,
           }} />
           {!isSoft && (
             <div style={{
               position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-              background: 'linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.5) 50%, rgba(0,0,0,0.85) 100%)',
+              background: 'linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.25) 50%, rgba(0,0,0,0.6) 100%)',
               zIndex: 1,
             }} />
           )}
