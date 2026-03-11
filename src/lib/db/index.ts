@@ -2,7 +2,8 @@ import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import * as schema from './schema'
 
-const DB_PATH = '/root/openclaw_clone/glimr.db'
+import path from 'path'
+const DB_PATH = path.join(process.cwd(), 'glimr.db')
 
 declare global {
   // eslint-disable-next-line no-var
