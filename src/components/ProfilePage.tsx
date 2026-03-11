@@ -135,12 +135,12 @@ function ImageCard({ link, isGrid, variant }: { link: Link; isGrid: boolean; var
       <img src={link.thumbnail_url!} alt={link.title}
         style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
       <PlatformBadge link={link} />
-      {/* Heavy bottom gradient — fades to match page bg for seamless flow */}
+      {/* Heavy bottom gradient — fades to near-black for seamless card flow */}
       <div style={{
-        position: 'absolute', bottom: 0, left: 0, right: 0, height: '55%',
+        position: 'absolute', bottom: 0, left: 0, right: 0, height: '60%',
         background: variant === 'soft'
-          ? 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.15) 40%, rgba(0,0,0,0.6) 100%)'
-          : 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.3) 30%, rgba(0,0,0,0.8) 70%, rgba(0,0,0,0.95) 100%)',
+          ? 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.1) 40%, rgba(0,0,0,0.55) 100%)'
+          : 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.2) 25%, rgba(0,0,0,0.7) 60%, rgba(0,0,0,0.95) 100%)',
       }} />
       <div style={{ position: 'absolute', bottom: 14, left: 16, right: 16, zIndex: 3 }}>
         <div style={{
@@ -225,17 +225,27 @@ function LinksSection({ links, variant, linkStyle, layout }: {
   if (layout === 'grid' && links.length > 1) {
     const first = links[0]
     const rest = links.slice(1)
+    // If odd number remaining, pull last one out for full-width
+    const hasOdd = rest.length % 2 === 1
+    const gridLinks = hasOdd ? rest.slice(0, -1) : rest
+    const lastLink = hasOdd ? rest[rest.length - 1] : null
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {/* First link always full width */}
         <LinkCard link={first} isGrid={false} variant={variant} linkStyle={linkStyle} />
-        {/* Rest in 2-column grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-          {rest.map(link => (
-            <LinkCard key={link.id} link={link} isGrid={true} variant={variant} linkStyle={linkStyle} />
-          ))}
-        </div>
+        {/* Pairs in 2-column grid */}
+        {gridLinks.length > 0 && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+            {gridLinks.map(link => (
+              <LinkCard key={link.id} link={link} isGrid={true} variant={variant} linkStyle={linkStyle} />
+            ))}
+          </div>
+        )}
+        {/* Odd one out → full width */}
+        {lastLink && (
+          <LinkCard link={lastLink} isGrid={false} variant={variant} linkStyle={linkStyle} />
+        )}
       </div>
     )
   }
@@ -356,7 +366,7 @@ export default function ProfilePage({ user, links }: Props) {
               : 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.15) 30%, rgba(0,0,0,0.65) 65%, rgba(0,0,0,0.92) 100%)',
           }} />
 
-          {/* Name + badge + handle overlaid on hero */}
+          {/* Name + badge + handle + bio overlaid on hero */}
           <div style={{
             position: 'absolute', bottom: 24, left: 0, right: 0,
             textAlign: 'center', zIndex: 3,
@@ -377,23 +387,23 @@ export default function ProfilePage({ user, links }: Props) {
             }}>
               @{user.username}
             </div>
+            {/* Bio lives INSIDE the hero — no orphaned text */}
+            {showBio && user.bio && (
+              <p style={{
+                color: 'rgba(255,255,255,0.5)',
+                fontSize: 13, lineHeight: 1.5,
+                marginTop: 6, padding: '0 24px',
+                textShadow: '0 1px 6px rgba(0,0,0,0.3)',
+                display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+              }}>
+                {user.bio}
+              </p>
+            )}
           </div>
         </div>
 
         {/* ════ CONTENT BELOW HERO ════ */}
-        <div style={{ padding: '10px 8px 40px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-
-          {/* Bio — minimal, tight */}
-          {showBio && user.bio && (
-            <p style={{
-              textAlign: 'center', color: bioColor,
-              fontSize: 13, lineHeight: 1.5,
-              padding: '4px 16px 8px',
-              display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-            }}>
-              {user.bio}
-            </p>
-          )}
+        <div style={{ padding: '6px 8px 40px', display: 'flex', flexDirection: 'column', gap: 6 }}>
 
           {/* Links */}
           <LinksSection
