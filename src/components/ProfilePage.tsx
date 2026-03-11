@@ -109,18 +109,14 @@ function LinkCard({ link, index, variant, linkStyle, isGrid }: {
   const useOverlay = linkStyle === 'overlay' && hasThumbnail
   const cardHeight = isGrid ? 140 : (hasThumbnail ? (useOverlay ? 240 : undefined) : undefined)
 
-  // Theme-specific
+  // Theme-specific — no box shadows on cards for seamless flow
   const glassCardBg = variant === 'soft'
     ? 'rgba(255,255,255,0.45)' : variant === 'neon' ? 'rgba(168,85,247,0.1)' : 'rgba(255,255,255,0.07)'
   const glassCardBorder = variant === 'soft'
     ? '1px solid rgba(255,255,255,0.5)' : variant === 'neon'
-      ? (isPrimary ? '1px solid rgba(168,85,247,0.5)' : '1px solid rgba(168,85,247,0.2)')
-      : '1px solid rgba(255,255,255,0.12)'
-  const glassCardShadow = variant === 'soft'
-    ? '0 4px 24px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04)'
-    : variant === 'neon'
-      ? (isPrimary ? '0 0 30px rgba(168,85,247,0.15)' : '0 2px 12px rgba(0,0,0,0.2)')
-      : '0 2px 16px rgba(0,0,0,0.2)'
+      ? (isPrimary ? '1px solid rgba(168,85,247,0.3)' : '1px solid rgba(168,85,247,0.1)')
+      : '1px solid rgba(255,255,255,0.06)'
+  const glassCardShadow = 'none'
   const titleColor = variant === 'soft' ? '#1a1a2e' : '#fff'
   const subtitleColor = variant === 'soft' ? '#9ca3af' : 'rgba(255,255,255,0.45)'
 
@@ -134,9 +130,9 @@ function LinkCard({ link, index, variant, linkStyle, isGrid }: {
         href={`/api/analytics/click?linkId=${link.id}&url=${encodeURIComponent(link.url)}`}
         style={{
           position: 'relative', display: 'block', width: '100%',
-          height: cardHeight, borderRadius: 14, overflow: 'hidden',
+          height: cardHeight, borderRadius: 16, overflow: 'hidden',
           textDecoration: 'none', cursor: 'pointer',
-          boxShadow: neonShadow,
+          boxShadow: 'none',
           border: variant === 'neon' ? glassCardBorder : 'none',
           transition: 'transform 0.2s',
         }}
@@ -146,10 +142,10 @@ function LinkCard({ link, index, variant, linkStyle, isGrid }: {
         <img src={link.thumbnail_url!} alt={link.title}
           style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
         <PlatformBadge link={link} />
-        {/* Gradient overlay */}
+        {/* Heavy bottom gradient — fades to pure black for seamless card flow */}
         <div style={{
-          position: 'absolute', bottom: 0, left: 0, right: 0, height: '60%',
-          background: 'linear-gradient(transparent 0%, rgba(0,0,0,0.75) 100%)',
+          position: 'absolute', bottom: 0, left: 0, right: 0, height: '50%',
+          background: 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.4) 30%, rgba(0,0,0,0.85) 70%, #000 100%)',
         }} />
         {/* Text */}
         <div style={{
@@ -180,11 +176,11 @@ function LinkCard({ link, index, variant, linkStyle, isGrid }: {
       <a
         href={`/api/analytics/click?linkId=${link.id}&url=${encodeURIComponent(link.url)}`}
         style={{
-          position: 'relative', display: 'block', width: '100%', borderRadius: 14, overflow: 'hidden',
+          position: 'relative', display: 'block', width: '100%', borderRadius: 16, overflow: 'hidden',
           textDecoration: 'none', cursor: 'pointer',
           background: glassCardBg, border: glassCardBorder,
           backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-          boxShadow: isPrimary && variant === 'neon' ? neonShadow : glassCardShadow,
+          boxShadow: 'none',
           transition: 'transform 0.2s',
         }}
         onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)' }}
@@ -220,12 +216,12 @@ function LinkCard({ link, index, variant, linkStyle, isGrid }: {
       href={`/api/analytics/click?linkId=${link.id}&url=${encodeURIComponent(link.url)}`}
       style={{
         position: 'relative', display: 'flex', alignItems: 'center', gap: 14,
-        width: '100%', borderRadius: 14, overflow: 'hidden',
+        width: '100%', borderRadius: 16, overflow: 'hidden',
         textDecoration: 'none', cursor: 'pointer',
         padding: '18px 16px', minHeight: isGrid ? 60 : 72,
         background: glassCardBg, border: glassCardBorder,
         backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-        boxShadow: isPrimary && variant === 'neon' ? neonShadow : glassCardShadow,
+        boxShadow: 'none',
         transition: 'transform 0.2s',
       }}
       onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)' }}
@@ -307,7 +303,7 @@ function HeroSection({ user, displayName, socials, variant }: {
   const avatarUrl = user.avatar_url || ''
   const nameColor = '#fff'
   const usernameColor = 'rgba(255,255,255,0.5)'
-  const gradientEnd = variant === 'soft' ? 'rgba(255,245,250,1)' : 'rgba(0,0,0,0.98)'
+  const gradientEnd = variant === 'soft' ? 'rgba(255,245,250,1)' : '#000'
   const gradientMid = variant === 'soft' ? 'rgba(255,245,250,0.0)' : 'rgba(0,0,0,0.0)'
 
   return (
@@ -390,18 +386,27 @@ function LinksSection({ links, variant, linkStyle, layout }: {
   if (layout === 'grid' && links.length > 1) {
     const firstLink = links[0]
     const restLinks = links.slice(1)
+    // If odd number of remaining links, last one goes full-width
+    const pairedLinks = restLinks.length % 2 === 1 ? restLinks.slice(0, -1) : restLinks
+    const lastLink = restLinks.length % 2 === 1 ? restLinks[restLinks.length - 1] : null
     return (
       <>
         {/* First link: full width */}
         <LinkCard link={firstLink} index={0} variant={variant} linkStyle={linkStyle} isGrid={false} />
         {/* Remaining: 2-column grid */}
-        <div style={{
-          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10,
-        }}>
-          {restLinks.map((link, i) => (
-            <LinkCard key={link.id} link={link} index={i + 1} variant={variant} linkStyle={linkStyle} isGrid={true} />
-          ))}
-        </div>
+        {pairedLinks.length > 0 && (
+          <div style={{
+            display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6,
+          }}>
+            {pairedLinks.map((link, i) => (
+              <LinkCard key={link.id} link={link} index={i + 1} variant={variant} linkStyle={linkStyle} isGrid={true} />
+            ))}
+          </div>
+        )}
+        {/* Orphaned last link: full width */}
+        {lastLink && (
+          <LinkCard link={lastLink} index={restLinks.length} variant={variant} linkStyle={linkStyle} isGrid={false} />
+        )}
       </>
     )
   }
@@ -424,7 +429,7 @@ function ProfileLayout({ user, links: enabledLinks, variant }: Props & { variant
 
   const pageBg = variant === 'soft'
     ? 'linear-gradient(180deg, #FFF5FA 0%, #FDF4FF 30%, #F5F3FF 100%)'
-    : '#0a0a0a'
+    : '#000'
 
   const bioColor = variant === 'soft' ? '#6b7280' : variant === 'neon' ? '#c4b5fd' : 'rgba(255,255,255,0.6)'
 
@@ -441,11 +446,11 @@ function ProfileLayout({ user, links: enabledLinks, variant }: Props & { variant
       <div style={{ position: 'relative', zIndex: 2, width: '100%', maxWidth: 440, minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <HeroSection user={user} displayName={displayName} socials={socials} variant={variant} />
 
-        <div style={{ width: '100%', padding: '12px 16px 40px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ width: '100%', padding: '12px 16px 40px', display: 'flex', flexDirection: 'column', gap: 6 }}>
           {showBio && user.bio && (
             <p style={{
               textAlign: 'center', color: bioColor, fontSize: 13, lineHeight: 1.5,
-              marginBottom: 4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+              marginBottom: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
             }}>{user.bio}</p>
           )}
 

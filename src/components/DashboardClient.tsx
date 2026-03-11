@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { signOut } from 'next-auth/react'
 import Link from 'next/link'
-import { Copy, Check, Pencil, X as XIcon, Loader2 } from 'lucide-react'
+import { Copy, Check, Pencil, X as XIcon, Loader2, ChevronUp, ChevronDown } from 'lucide-react'
 
 type LinkItem = {
   id: number
@@ -29,51 +29,55 @@ type User = {
   show_bio: number
 }
 
-type Tab = 'links' | 'settings' | 'analytics'
+const sidebarBg = 'rgba(15, 10, 26, 0.98)'
+const inputBg = 'rgba(255,255,255,0.06)'
+const inputBorder = 'rgba(255,255,255,0.1)'
+const accent = '#6366F1'
 
-const THEMES = [
-  {
-    id: 'classic' as const,
-    name: 'Classic',
-    desc: 'Dark & minimal',
-    preview: (
-      <div className="rounded-lg p-3 h-20" style={{ background: '#0F0A1A', border: '1px solid #2d1d4e' }}>
-        <div className="w-6 h-6 rounded-full mx-auto mb-1" style={{ background: '#8B5CF6' }} />
-        <div className="w-16 h-1.5 mx-auto mb-1" style={{ background: '#1A1030', borderRadius: '2px' }} />
-        <div className="w-12 h-1.5 mx-auto" style={{ background: '#1A1030', borderRadius: '2px' }} />
-      </div>
-    ),
-  },
-  {
-    id: 'neon' as const,
-    name: 'Neon',
-    desc: 'Vibrant & glowing',
-    preview: (
-      <div className="rounded-lg p-3 h-20" style={{ background: '#000', border: '1px solid #8B5CF6' }}>
-        <div className="w-6 h-6 rounded-full mx-auto mb-1" style={{ background: 'linear-gradient(135deg, #A855F7, #EC4899)', boxShadow: '0 0 8px #A855F7' }} />
-        <div className="w-16 h-1.5 rounded-full mx-auto mb-1" style={{ background: 'linear-gradient(90deg, #A855F7, #EC4899)' }} />
-        <div className="w-12 h-1.5 rounded-full mx-auto" style={{ background: 'linear-gradient(90deg, #A855F7, #EC4899)', opacity: 0.7 }} />
-      </div>
-    ),
-  },
-  {
-    id: 'soft' as const,
-    name: 'Soft',
-    desc: 'Pastel & light',
-    preview: (
-      <div className="rounded-lg p-3 h-20" style={{ background: '#FDF4FF', border: '1px solid #f0d0ff' }}>
-        <div className="w-6 h-6 rounded-full mx-auto mb-1" style={{ background: 'linear-gradient(135deg, #f9a8d4, #c084fc)' }} />
-        <div className="w-16 h-1.5 rounded-2xl mx-auto mb-1" style={{ background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }} />
-        <div className="w-12 h-1.5 rounded-2xl mx-auto" style={{ background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }} />
-      </div>
-    ),
-  },
-]
+function StudioInput({ label, value, onChange, placeholder, type = 'text', rows }: {
+  label: string; value: string; onChange: (v: string) => void; placeholder?: string; type?: string; rows?: number
+}) {
+  const style: React.CSSProperties = {
+    width: '100%', padding: '8px 12px', borderRadius: 8, border: `1px solid ${inputBorder}`,
+    background: inputBg, color: '#fff', fontSize: 13, outline: 'none', resize: 'none' as const,
+    fontFamily: 'inherit',
+  }
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <label style={{ display: 'block', fontSize: 11, fontWeight: 500, color: '#9CA3AF', marginBottom: 4, textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>{label}</label>
+      {rows ? (
+        <textarea value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} rows={rows} style={style} />
+      ) : (
+        <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} style={style} />
+      )}
+    </div>
+  )
+}
+
+function Toggle({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+      <span style={{ fontSize: 13, color: '#D1D5DB' }}>{label}</span>
+      <button onClick={() => onChange(!value)} style={{
+        width: 36, height: 20, borderRadius: 10, border: 'none', cursor: 'pointer',
+        background: value ? accent : 'rgba(255,255,255,0.15)', transition: 'background 0.15s',
+        position: 'relative',
+      }}>
+        <span style={{
+          position: 'absolute', top: 2, left: value ? 18 : 2,
+          width: 16, height: 16, borderRadius: 8, background: '#fff',
+          transition: 'left 0.15s',
+        }} />
+      </button>
+    </div>
+  )
+}
 
 export default function DashboardClient({ user: initialUser }: { user: User }) {
-  const [tab, setTab] = useState<Tab>('links')
   const [links, setLinks] = useState<LinkItem[]>([])
   const [user, setUser] = useState<User>(initialUser)
+  const iframeRef = useRef<HTMLIFrameElement>(null)
+  const [iframeKey, setIframeKey] = useState(0)
 
   // Add link form
   const [newTitle, setNewTitle] = useState('')
@@ -81,6 +85,7 @@ export default function DashboardClient({ user: initialUser }: { user: User }) {
   const [newIcon, setNewIcon] = useState('🔗')
   const [newThumbnail, setNewThumbnail] = useState('')
   const [addingLink, setAddingLink] = useState(false)
+  const [showAddForm, setShowAddForm] = useState(false)
 
   // Settings form
   const [settingsForm, setSettingsForm] = useState({
@@ -93,29 +98,50 @@ export default function DashboardClient({ user: initialUser }: { user: User }) {
     show_blurred_bg: initialUser.show_blurred_bg ?? 1,
     show_bio: initialUser.show_bio ?? 1,
   })
-  const [previewKey, setPreviewKey] = useState(0)
-  const [savingSettings, setSavingSettings] = useState(false)
-  const [settingsSaved, setSettingsSaved] = useState(false)
   const [linkCopied, setLinkCopied] = useState(false)
 
-  // Inline editing (CR-011)
+  // Inline editing
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editForm, setEditForm] = useState({ title: '', url: '', icon: '', thumbnail_url: '' })
-
-  // Delete confirmation (CR-010)
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
+
+  // Auto-save debounce
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [saving, setSaving] = useState(false)
+
+  const refreshPreview = useCallback(() => {
+    setIframeKey(k => k + 1)
+  }, [])
 
   const fetchLinks = useCallback(async () => {
     const res = await fetch('/api/links')
-    if (res.ok) {
-      const data = await res.json()
-      setLinks(data)
-    }
+    if (res.ok) setLinks(await res.json())
   }, [])
 
+  useEffect(() => { fetchLinks() }, [fetchLinks])
+
+  // Auto-save settings on change
   useEffect(() => {
-    fetchLinks()
-  }, [fetchLinks])
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+    saveTimeoutRef.current = setTimeout(async () => {
+      setSaving(true)
+      try {
+        const res = await fetch('/api/user/settings', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(settingsForm),
+        })
+        if (res.ok) {
+          const updated = await res.json()
+          setUser(prev => ({ ...prev, ...updated }))
+          refreshPreview()
+        }
+      } finally {
+        setSaving(false)
+      }
+    }, 600)
+    return () => { if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current) }
+  }, [settingsForm, refreshPreview])
 
   const addLink = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -123,56 +149,44 @@ export default function DashboardClient({ user: initialUser }: { user: User }) {
     setAddingLink(true)
     try {
       let url = newUrl.trim()
-      if (!url.startsWith('http://') && !url.startsWith('https://')) {
-        url = 'https://' + url
-      }
+      if (!url.startsWith('http://') && !url.startsWith('https://')) url = 'https://' + url
       const res = await fetch('/api/links', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: newTitle.trim(), url, icon: newIcon, thumbnail_url: newThumbnail.trim() || null }),
       })
       if (res.ok) {
-        setNewTitle('')
-        setNewUrl('')
-        setNewIcon('🔗')
-        setNewThumbnail('')
+        setNewTitle(''); setNewUrl(''); setNewIcon('🔗'); setNewThumbnail(''); setShowAddForm(false)
         await fetchLinks()
+        refreshPreview()
       }
-    } finally {
-      setAddingLink(false)
-    }
+    } finally { setAddingLink(false) }
   }
 
   const deleteLink = async (id: number) => {
-    if (confirmDeleteId !== id) {
-      setConfirmDeleteId(id)
-      setTimeout(() => setConfirmDeleteId(null), 3000)
-      return
-    }
+    if (confirmDeleteId !== id) { setConfirmDeleteId(id); setTimeout(() => setConfirmDeleteId(null), 3000); return }
     await fetch(`/api/links?id=${id}`, { method: 'DELETE' })
     setConfirmDeleteId(null)
     await fetchLinks()
+    refreshPreview()
   }
 
   const toggleLink = async (id: number, enabled: number) => {
-    await fetch(`/api/links?id=${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ enabled: enabled === 1 ? 0 : 1 }),
-    })
+    await fetch(`/api/links?id=${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: enabled === 1 ? 0 : 1 }) })
     await fetchLinks()
+    refreshPreview()
   }
 
   const moveLink = async (index: number, direction: 'up' | 'down') => {
     const swapIndex = direction === 'up' ? index - 1 : index + 1
     if (swapIndex < 0 || swapIndex >= links.length) return
-    const a = links[index]
-    const b = links[swapIndex]
+    const a = links[index], b = links[swapIndex]
     await Promise.all([
       fetch(`/api/links?id=${a.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ position: b.position }) }),
       fetch(`/api/links?id=${b.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ position: a.position }) }),
     ])
     await fetchLinks()
+    refreshPreview()
   }
 
   const startEdit = (link: LinkItem) => {
@@ -182,33 +196,10 @@ export default function DashboardClient({ user: initialUser }: { user: User }) {
 
   const saveEdit = async () => {
     if (!editingId) return
-    await fetch(`/api/links?id=${editingId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(editForm),
-    })
+    await fetch(`/api/links?id=${editingId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editForm) })
     setEditingId(null)
     await fetchLinks()
-  }
-
-  const saveSettings = async () => {
-    setSavingSettings(true)
-    try {
-      const res = await fetch('/api/user/settings', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(settingsForm),
-      })
-      if (res.ok) {
-        const updated = await res.json()
-        setUser({ ...user, ...updated })
-        setSettingsSaved(true)
-        setPreviewKey(k => k + 1)
-        setTimeout(() => setSettingsSaved(false), 2000)
-      }
-    } finally {
-      setSavingSettings(false)
-    }
+    refreshPreview()
   }
 
   const copyLink = () => {
@@ -217,324 +208,219 @@ export default function DashboardClient({ user: initialUser }: { user: User }) {
     setTimeout(() => setLinkCopied(false), 2000)
   }
 
-  const inputStyle = {
-    background: 'rgba(139, 92, 246, 0.1)',
-    borderColor: 'rgba(139, 92, 246, 0.3)',
-  }
-
   return (
-    <div className="min-h-screen" style={{ background: '#0F0A1A' }}>
-      {/* Top Nav */}
-      <nav className="border-b border-purple-900/30 px-6 py-4 flex items-center justify-between sticky top-0 z-10"
-        style={{ background: 'rgba(15, 10, 26, 0.95)', backdropFilter: 'blur(10px)' }}>
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"
-            style={{ background: 'linear-gradient(135deg, #8B5CF6, #EC4899)' }}>
-            ✨
-          </div>
-          <span className="text-white font-bold text-lg">Glimr</span>
+    <div style={{ minHeight: '100vh', background: '#0F0A1A', fontFamily: "'Inter', -apple-system, sans-serif", display: 'flex', flexDirection: 'column' }}>
+      {/* Nav */}
+      <nav style={{
+        borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '0 20px', height: 52,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        background: 'rgba(15, 10, 26, 0.98)', backdropFilter: 'blur(12px)',
+        flexShrink: 0,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 26, height: 26, borderRadius: 7, background: accent, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 13, fontWeight: 700 }}>G</div>
+          <span style={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>Studio</span>
+          {saving && <span style={{ color: '#6B7280', fontSize: 11, marginLeft: 8 }}>Saving…</span>}
         </div>
-
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1">
-            <Link href={`/${user.username}`} target="_blank"
-              className="text-sm text-purple-300 hover:text-white transition-colors flex items-center gap-1">
-              My Page <span>↗</span>
-            </Link>
-            <button onClick={copyLink}
-              className="p-2 text-purple-400 hover:text-white transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
-              title="Copy My Link">
-              {linkCopied ? <Check size={16} /> : <Copy size={16} />}
-            </button>
-          </div>
-          <button onClick={() => signOut({ callbackUrl: '/' })}
-            className="text-sm text-purple-400 hover:text-white transition-colors">
-            Sign out
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <Link href={`/${user.username}`} target="_blank" style={{ color: '#9CA3AF', fontSize: 13, textDecoration: 'none' }}>
+            View Page ↗
+          </Link>
+          <button onClick={copyLink} style={{ color: '#9CA3AF', fontSize: 13, background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+            {linkCopied ? <><Check size={14} /> Copied</> : <><Copy size={14} /> Copy Link</>}
           </button>
+          <Link href="/dashboard/analytics" style={{ color: '#9CA3AF', fontSize: 13, textDecoration: 'none' }}>Analytics</Link>
+          <button onClick={() => signOut({ callbackUrl: '/' })} style={{ color: '#6B7280', fontSize: 13, background: 'none', border: 'none', cursor: 'pointer' }}>Sign out</button>
         </div>
       </nav>
 
-      <div className="max-w-3xl mx-auto px-4 py-8">
-        {/* Welcome */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-white">
-            {user.display_name ? `Hey, ${user.display_name}! 👋` : 'Dashboard'}
-          </h1>
-          <p className="text-purple-400 text-sm mt-1">
-            glimr.io/<span className="text-purple-300">{user.username}</span>
-            {linkCopied && <span className="ml-2 text-green-400 text-xs">Copied!</span>}
-          </p>
-        </div>
-
-        {/* Tab Bar */}
-        <div className="flex gap-1 mb-8 rounded-xl p-1" style={{ background: 'rgba(139, 92, 246, 0.1)' }}>
-          {([['links', '🔗 My Links'], ['analytics', '📊 Analytics'], ['settings', '⚙️ Settings']] as const).map(([t, label]) => (
-            <button key={t} onClick={() => setTab(t)}
-              className="flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all"
-              style={tab === t ? { background: 'linear-gradient(135deg, #8B5CF6, #EC4899)', color: 'white' } : { color: '#a78bfa' }}>
-              {label}
+      {/* Main: 3 columns */}
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+        {/* LEFT SIDEBAR — Links */}
+        <div style={{
+          width: 280, minWidth: 280, background: sidebarBg, borderRight: '1px solid rgba(255,255,255,0.06)',
+          overflowY: 'auto', padding: '20px 16px', display: 'flex', flexDirection: 'column',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <h2 style={{ color: '#fff', fontSize: 14, fontWeight: 600, margin: 0 }}>Links</h2>
+            <button onClick={() => setShowAddForm(!showAddForm)} style={{
+              background: accent, color: '#fff', border: 'none', borderRadius: 6,
+              padding: '4px 10px', fontSize: 12, fontWeight: 500, cursor: 'pointer',
+            }}>
+              {showAddForm ? 'Cancel' : '+ Add'}
             </button>
-          ))}
+          </div>
+
+          {showAddForm && (
+            <form onSubmit={addLink} style={{ marginBottom: 16, padding: 12, borderRadius: 8, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                <input type="text" value={newIcon} onChange={e => setNewIcon(e.target.value)} placeholder="🔗"
+                  style={{ width: 40, padding: '6px 4px', borderRadius: 6, border: `1px solid ${inputBorder}`, background: inputBg, color: '#fff', textAlign: 'center' as const, fontSize: 16, outline: 'none' }} />
+                <input type="text" value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="Title"
+                  style={{ flex: 1, padding: '6px 10px', borderRadius: 6, border: `1px solid ${inputBorder}`, background: inputBg, color: '#fff', fontSize: 13, outline: 'none' }} required />
+              </div>
+              <input type="text" value={newUrl} onChange={e => setNewUrl(e.target.value)} placeholder="https://..."
+                style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: `1px solid ${inputBorder}`, background: inputBg, color: '#fff', fontSize: 13, outline: 'none', marginBottom: 8, boxSizing: 'border-box' as const }} required />
+              <input type="text" value={newThumbnail} onChange={e => setNewThumbnail(e.target.value)} placeholder="Thumbnail URL (optional)"
+                style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: `1px solid ${inputBorder}`, background: inputBg, color: '#fff', fontSize: 12, outline: 'none', marginBottom: 8, boxSizing: 'border-box' as const }} />
+              <button type="submit" disabled={addingLink} style={{
+                width: '100%', padding: '7px 0', borderRadius: 6, border: 'none', background: accent,
+                color: '#fff', fontSize: 13, fontWeight: 500, cursor: 'pointer', opacity: addingLink ? 0.5 : 1,
+              }}>
+                {addingLink ? 'Adding…' : 'Add Link'}
+              </button>
+            </form>
+          )}
+
+          {links.length === 0 ? (
+            <div style={{ color: '#6B7280', fontSize: 13, textAlign: 'center', padding: '32px 0' }}>No links yet</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {links.map((link, i) => (
+                <div key={link.id} style={{
+                  padding: '8px 10px', borderRadius: 8, background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.06)', opacity: link.enabled ? 1 : 0.5,
+                }}>
+                  {editingId === link.id ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <input type="text" value={editForm.icon} onChange={e => setEditForm(p => ({ ...p, icon: e.target.value }))}
+                          style={{ width: 36, padding: '4px', borderRadius: 4, border: `1px solid ${inputBorder}`, background: inputBg, color: '#fff', textAlign: 'center' as const, fontSize: 14, outline: 'none' }} />
+                        <input type="text" value={editForm.title} onChange={e => setEditForm(p => ({ ...p, title: e.target.value }))}
+                          style={{ flex: 1, padding: '4px 8px', borderRadius: 4, border: `1px solid ${inputBorder}`, background: inputBg, color: '#fff', fontSize: 12, outline: 'none' }} />
+                      </div>
+                      <input type="text" value={editForm.url} onChange={e => setEditForm(p => ({ ...p, url: e.target.value }))}
+                        style={{ padding: '4px 8px', borderRadius: 4, border: `1px solid ${inputBorder}`, background: inputBg, color: '#fff', fontSize: 12, outline: 'none' }} />
+                      <input type="text" value={editForm.thumbnail_url} onChange={e => setEditForm(p => ({ ...p, thumbnail_url: e.target.value }))}
+                        placeholder="Thumbnail URL" style={{ padding: '4px 8px', borderRadius: 4, border: `1px solid ${inputBorder}`, background: inputBg, color: '#fff', fontSize: 11, outline: 'none' }} />
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button onClick={saveEdit} style={{ flex: 1, padding: '5px 0', borderRadius: 4, border: 'none', background: accent, color: '#fff', fontSize: 12, cursor: 'pointer' }}>Save</button>
+                        <button onClick={() => setEditingId(null)} style={{ flex: 1, padding: '5px 0', borderRadius: 4, border: `1px solid ${inputBorder}`, background: 'none', color: '#9CA3AF', fontSize: 12, cursor: 'pointer' }}>Cancel</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                        <button onClick={() => moveLink(i, 'up')} disabled={i === 0} style={{ background: 'none', border: 'none', color: i === 0 ? '#333' : '#6B7280', cursor: 'pointer', padding: 0, fontSize: 10, lineHeight: 1 }}>
+                          <ChevronUp size={12} />
+                        </button>
+                        <button onClick={() => moveLink(i, 'down')} disabled={i === links.length - 1} style={{ background: 'none', border: 'none', color: i === links.length - 1 ? '#333' : '#6B7280', cursor: 'pointer', padding: 0, fontSize: 10, lineHeight: 1 }}>
+                          <ChevronDown size={12} />
+                        </button>
+                      </div>
+                      <span style={{ fontSize: 16 }}>{link.icon}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ color: '#fff', fontSize: 13, fontWeight: 500, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{link.title}</p>
+                        <p style={{ color: '#6B7280', fontSize: 11, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{link.url}</p>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                        <button onClick={() => startEdit(link)} style={{ background: 'none', border: 'none', color: '#6B7280', cursor: 'pointer', padding: 2 }}><Pencil size={13} /></button>
+                        <button onClick={() => toggleLink(link.id, link.enabled)} style={{
+                          width: 28, height: 16, borderRadius: 8, border: 'none', cursor: 'pointer',
+                          background: link.enabled ? accent : 'rgba(255,255,255,0.15)', position: 'relative',
+                        }}>
+                          <span style={{
+                            position: 'absolute', top: 2, left: link.enabled ? 14 : 2,
+                            width: 12, height: 12, borderRadius: 6, background: '#fff', transition: 'left 0.15s',
+                          }} />
+                        </button>
+                        <button onClick={() => deleteLink(link.id)} style={{
+                          background: 'none', border: 'none', cursor: 'pointer', padding: 2,
+                          color: confirmDeleteId === link.id ? '#EF4444' : '#6B7280',
+                        }}>
+                          {confirmDeleteId === link.id ? <span style={{ fontSize: 10, color: '#EF4444' }}>Del?</span> : <XIcon size={13} />}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* LINKS TAB */}
-        {tab === 'links' && (
-          <div className="space-y-6">
-            <div className="rounded-2xl border border-purple-900/50 p-6" style={{ background: 'rgba(26, 16, 48, 0.8)' }}>
-              <h2 className="text-white font-semibold mb-4">Add New Link</h2>
-              <form onSubmit={addLink} className="space-y-3">
-                <div className="flex gap-3">
-                  <input type="text" value={newIcon} onChange={e => setNewIcon(e.target.value)} placeholder="🔗"
-                    className="w-16 px-3 py-3 rounded-xl border text-white text-center text-xl outline-none" style={inputStyle} />
-                  <input type="text" value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="Link title"
-                    className="flex-1 px-4 py-3 rounded-xl border text-white placeholder-purple-400/50 outline-none" style={inputStyle} required />
-                </div>
-                <input type="text" value={newThumbnail} onChange={e => setNewThumbnail(e.target.value)} placeholder="Thumbnail image URL (optional)"
-                  className="w-full px-4 py-3 rounded-xl border text-white placeholder-purple-400/50 outline-none text-sm" style={inputStyle} />
-                <div className="flex gap-3">
-                  <input type="text" value={newUrl} onChange={e => setNewUrl(e.target.value)} placeholder="https://..."
-                    className="flex-1 px-4 py-3 rounded-xl border text-white placeholder-purple-400/50 outline-none" style={inputStyle} required />
-                  <button type="submit" disabled={addingLink}
-                    className="px-6 py-3 rounded-xl text-white font-medium transition-all hover:opacity-90 disabled:opacity-50 whitespace-nowrap flex items-center gap-2"
-                    style={{ background: 'linear-gradient(135deg, #8B5CF6, #EC4899)' }}>
-                    {addingLink ? <><Loader2 size={16} className="animate-spin" /> Adding…</> : '+ Add'}
-                  </button>
-                </div>
-              </form>
-            </div>
-
-            {links.length === 0 ? (
-              <div className="text-center text-purple-400 py-12">
-                <div className="text-4xl mb-3">🔗</div>
-                <p>No links yet. Add your first link above!</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {links.map((link, i) => (
-                  <div key={link.id}
-                    className="rounded-xl border p-4 transition-all"
-                    style={{
-                      background: link.enabled ? 'rgba(26, 16, 48, 0.8)' : 'rgba(15, 10, 26, 0.5)',
-                      borderColor: link.enabled ? 'rgba(139, 92, 246, 0.3)' : 'rgba(139, 92, 246, 0.1)',
-                      opacity: link.enabled ? 1 : 0.6,
-                    }}>
-                    {editingId === link.id ? (
-                      <div className="space-y-3">
-                        <div className="flex gap-3">
-                          <input type="text" value={editForm.icon} onChange={e => setEditForm(p => ({ ...p, icon: e.target.value }))}
-                            className="w-16 px-3 py-2 rounded-lg border text-white text-center text-xl outline-none" style={inputStyle} />
-                          <input type="text" value={editForm.title} onChange={e => setEditForm(p => ({ ...p, title: e.target.value }))}
-                            className="flex-1 px-3 py-2 rounded-lg border text-white outline-none" style={inputStyle} />
-                        </div>
-                        <input type="text" value={editForm.url} onChange={e => setEditForm(p => ({ ...p, url: e.target.value }))}
-                          className="w-full px-3 py-2 rounded-lg border text-white outline-none" style={inputStyle} />
-                        <input type="text" value={editForm.thumbnail_url} onChange={e => setEditForm(p => ({ ...p, thumbnail_url: e.target.value }))}
-                          placeholder="Thumbnail image URL (optional)"
-                          className="w-full px-3 py-2 rounded-lg border text-white placeholder-purple-400/50 outline-none text-sm" style={inputStyle} />
-                        <div className="flex gap-2">
-                          <button onClick={saveEdit}
-                            className="px-4 py-2 rounded-lg text-white text-sm font-medium"
-                            style={{ background: 'linear-gradient(135deg, #8B5CF6, #EC4899)' }}>
-                            Save
-                          </button>
-                          <button onClick={() => setEditingId(null)}
-                            className="px-4 py-2 rounded-lg text-purple-400 text-sm border border-purple-800/50">
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-3">
-                        <div className="flex flex-col gap-1">
-                          <button onClick={() => moveLink(i, 'up')} disabled={i === 0}
-                            className="text-purple-400 hover:text-white disabled:opacity-20 text-xs leading-none">▲</button>
-                          <button onClick={() => moveLink(i, 'down')} disabled={i === links.length - 1}
-                            className="text-purple-400 hover:text-white disabled:opacity-20 text-xs leading-none">▼</button>
-                        </div>
-
-                        <span className="text-2xl">{link.icon}</span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-white font-medium truncate">{link.title}</p>
-                          <p className="text-purple-400 text-xs truncate">{link.url}</p>
-                        </div>
-
-                        {link.click_count > 0 && (
-                          <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs"
-                            style={{ background: 'rgba(139, 92, 246, 0.15)', color: '#a78bfa' }}>
-                            <span>👆</span><span>{link.click_count}</span>
-                          </div>
-                        )}
-
-                        {/* Edit button (CR-011) */}
-                        <button onClick={() => startEdit(link)}
-                          className="min-w-[44px] min-h-[44px] flex items-center justify-center text-purple-400 hover:text-white transition-colors"
-                          title="Edit">
-                          <Pencil size={16} />
-                        </button>
-
-                        {/* Toggle with gap (CR-039) */}
-                        <div className="flex items-center gap-3">
-                          <button onClick={() => toggleLink(link.id, link.enabled)}
-                            className="w-10 h-6 rounded-full transition-all flex items-center px-1 min-w-[44px] min-h-[44px] justify-center"
-                            style={{ background: link.enabled ? 'linear-gradient(135deg, #8B5CF6, #EC4899)' : 'rgba(139, 92, 246, 0.2)' }}>
-                            <span className="w-4 h-4 rounded-full bg-white transition-transform"
-                              style={{ transform: link.enabled ? 'translateX(16px)' : 'translateX(0)' }} />
-                          </button>
-
-                          {/* Delete with confirmation (CR-010) */}
-                          <button onClick={() => deleteLink(link.id)}
-                            className="min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors text-lg"
-                            style={{ color: confirmDeleteId === link.id ? '#ef4444' : '#a78bfa' }}
-                            title={confirmDeleteId === link.id ? 'Click again to confirm' : 'Delete'}>
-                            {confirmDeleteId === link.id ? (
-                              <span className="text-xs font-medium text-red-400">Confirm?</span>
-                            ) : (
-                              <XIcon size={16} />
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+        {/* CENTER — Live Preview */}
+        <div style={{
+          flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start',
+          padding: 24, background: '#0A0612', overflow: 'auto',
+        }}>
+          <div style={{ fontSize: 11, color: '#6B7280', marginBottom: 12, textAlign: 'center' as const }}>
+            Live Preview — glimr.io/{user.username}
           </div>
-        )}
-
-        {/* ANALYTICS TAB */}
-        {tab === 'analytics' && (
-          <div className="rounded-2xl border border-purple-900/50 p-8 text-center" style={{ background: 'rgba(26, 16, 48, 0.8)' }}>
-            <div className="text-4xl mb-4">📊</div>
-            <h2 className="text-white font-bold text-xl mb-2">Full Analytics Dashboard</h2>
-            <p className="text-purple-300 mb-6">Views, clicks, referrers, 30-day charts — all free.</p>
-            <Link href="/dashboard/analytics"
-              className="inline-block px-6 py-3 rounded-xl text-white font-medium transition-all hover:opacity-90"
-              style={{ background: 'linear-gradient(135deg, #8B5CF6, #EC4899)' }}>
-              Open Analytics →
-            </Link>
+          <div style={{
+            width: '100%', maxWidth: 430, flex: 1, borderRadius: 16,
+            border: '1px solid rgba(255,255,255,0.08)',
+            boxShadow: '0 0 60px rgba(99, 102, 241, 0.08)',
+            overflow: 'hidden', background: '#000',
+          }}>
+            <iframe
+              ref={iframeRef}
+              key={iframeKey}
+              src={`/${user.username}?t=${iframeKey}`}
+              style={{ width: '100%', height: '100%', border: 'none', minHeight: '80vh' }}
+              title="Profile Preview"
+            />
           </div>
-        )}
+        </div>
 
-        {/* SETTINGS TAB */}
-        {tab === 'settings' && (
-          <div className="space-y-6">
-            <div className="rounded-2xl border border-purple-900/50 p-6" style={{ background: 'rgba(26, 16, 48, 0.8)' }}>
-              <h2 className="text-white font-semibold mb-4">Profile</h2>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-purple-200 mb-2">Display Name</label>
-                  <input type="text" value={settingsForm.display_name}
-                    onChange={e => setSettingsForm(p => ({ ...p, display_name: e.target.value }))}
-                    className="w-full px-4 py-3 rounded-xl border text-white placeholder-purple-400/50 outline-none" style={inputStyle} placeholder="Your Name" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-purple-200 mb-2">Bio</label>
-                  <textarea value={settingsForm.bio}
-                    onChange={e => setSettingsForm(p => ({ ...p, bio: e.target.value }))}
-                    className="w-full px-4 py-3 rounded-xl border text-white placeholder-purple-400/50 outline-none resize-none" style={inputStyle}
-                    placeholder="Tell your fans about yourself..." rows={3} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-purple-200 mb-2">Avatar URL</label>
-                  <input type="url" value={settingsForm.avatar_url}
-                    onChange={e => setSettingsForm(p => ({ ...p, avatar_url: e.target.value }))}
-                    className="w-full px-4 py-3 rounded-xl border text-white placeholder-purple-400/50 outline-none" style={inputStyle} placeholder="https://..." />
-                </div>
-              </div>
-            </div>
+        {/* RIGHT SIDEBAR — Settings */}
+        <div style={{
+          width: 280, minWidth: 280, background: sidebarBg, borderLeft: '1px solid rgba(255,255,255,0.06)',
+          overflowY: 'auto', padding: '20px 16px',
+        }}>
+          <h2 style={{ color: '#fff', fontSize: 14, fontWeight: 600, marginBottom: 16, marginTop: 0 }}>Settings</h2>
 
-            <div className="rounded-2xl border border-purple-900/50 p-6" style={{ background: 'rgba(26, 16, 48, 0.8)' }}>
-              <h2 className="text-white font-semibold mb-4">Theme</h2>
-              <div className="grid grid-cols-3 gap-4">
-                {THEMES.map(theme => (
-                  <button key={theme.id}
-                    onClick={() => setSettingsForm(p => ({ ...p, theme: theme.id }))}
-                    className="rounded-xl p-3 text-left transition-all"
-                    style={{
-                      border: settingsForm.theme === theme.id ? '2px solid #8B5CF6' : '2px solid transparent',
-                      boxShadow: settingsForm.theme === theme.id ? '0 0 0 2px rgba(139, 92, 246, 0.3)' : 'none',
-                      background: settingsForm.theme === theme.id ? 'rgba(139, 92, 246, 0.15)' : 'rgba(139, 92, 246, 0.05)',
-                    }}>
-                    {theme.preview}
-                    <p className="text-white text-sm font-medium mt-2">{theme.name}</p>
-                    <p className="text-purple-400 text-xs">{theme.desc}</p>
-                    {settingsForm.theme === theme.id && <span className="text-xs text-purple-300 mt-1 inline-block">✓ Selected</span>}
-                  </button>
-                ))}
-              </div>
-            </div>
+          {/* Profile */}
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: '#6B7280', marginBottom: 10, textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Profile</div>
+            <StudioInput label="Display Name" value={settingsForm.display_name} onChange={v => setSettingsForm(p => ({ ...p, display_name: v }))} placeholder="Your Name" />
+            <StudioInput label="Bio" value={settingsForm.bio} onChange={v => setSettingsForm(p => ({ ...p, bio: v }))} placeholder="About you…" rows={3} />
+            <StudioInput label="Avatar URL" value={settingsForm.avatar_url} onChange={v => setSettingsForm(p => ({ ...p, avatar_url: v }))} placeholder="https://..." />
+          </div>
 
-            {/* Page Layout Settings */}
-            <div className="rounded-2xl border border-purple-900/50 p-6" style={{ background: 'rgba(26, 16, 48, 0.8)' }}>
-              <h2 className="text-white font-semibold mb-4">Page Layout</h2>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-purple-200 mb-2">Link Card Style</label>
-                  <select value={settingsForm.link_style}
-                    onChange={e => setSettingsForm(p => ({ ...p, link_style: e.target.value as 'default' | 'overlay' }))}
-                    className="w-full px-4 py-3 rounded-xl border text-white outline-none appearance-none" style={inputStyle}>
-                    <option value="overlay">Overlay (text on image)</option>
-                    <option value="default">Default (text below image)</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-purple-200 mb-2">Layout</label>
-                  <select value={settingsForm.layout}
-                    onChange={e => setSettingsForm(p => ({ ...p, layout: e.target.value as 'list' | 'grid' }))}
-                    className="w-full px-4 py-3 rounded-xl border text-white outline-none appearance-none" style={inputStyle}>
-                    <option value="list">Single Column (list)</option>
-                    <option value="grid">Two-Column Grid</option>
-                  </select>
-                </div>
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium text-purple-200">Blurred Background</label>
-                  <button onClick={() => setSettingsForm(p => ({ ...p, show_blurred_bg: p.show_blurred_bg ? 0 : 1 }))}
-                    className="w-10 h-6 rounded-full transition-all flex items-center px-1"
-                    style={{ background: settingsForm.show_blurred_bg ? 'linear-gradient(135deg, #8B5CF6, #EC4899)' : 'rgba(139, 92, 246, 0.2)' }}>
-                    <span className="w-4 h-4 rounded-full bg-white transition-transform"
-                      style={{ transform: settingsForm.show_blurred_bg ? 'translateX(16px)' : 'translateX(0)' }} />
-                  </button>
-                </div>
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium text-purple-200">Show Bio</label>
-                  <button onClick={() => setSettingsForm(p => ({ ...p, show_bio: p.show_bio ? 0 : 1 }))}
-                    className="w-10 h-6 rounded-full transition-all flex items-center px-1"
-                    style={{ background: settingsForm.show_bio ? 'linear-gradient(135deg, #8B5CF6, #EC4899)' : 'rgba(139, 92, 246, 0.2)' }}>
-                    <span className="w-4 h-4 rounded-full bg-white transition-transform"
-                      style={{ transform: settingsForm.show_bio ? 'translateX(16px)' : 'translateX(0)' }} />
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Live Preview */}
-            <div className="rounded-2xl border border-purple-900/50 p-6" style={{ background: 'rgba(26, 16, 48, 0.8)' }}>
-              <h2 className="text-white font-semibold mb-4">Live Preview</h2>
-              <div className="rounded-xl overflow-hidden border border-purple-900/30" style={{ height: 500 }}>
-                <iframe
-                  key={previewKey}
-                  src={`/${user.username}`}
-                  style={{ width: '100%', height: '100%', border: 'none', borderRadius: 12 }}
-                  title="Profile Preview"
-                />
-              </div>
-              <p className="text-purple-400 text-xs mt-2 text-center">Save settings to update preview</p>
-            </div>
-
-            <div className="flex gap-3">
-              <button onClick={saveSettings} disabled={savingSettings}
-                className="flex-1 py-3 rounded-xl text-white font-medium transition-all hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
-                style={{ background: 'linear-gradient(135deg, #8B5CF6, #EC4899)' }}>
-                {savingSettings ? <><Loader2 size={16} className="animate-spin" /> Saving…</> : settingsSaved ? '✓ Saved!' : 'Save My Settings'}
-              </button>
-              <button onClick={copyLink}
-                className="px-6 py-3 rounded-xl text-purple-300 border border-purple-500/50 hover:border-purple-400 hover:text-white transition-all font-medium">
-                {linkCopied ? '✓ Copied!' : '🔗 Copy My Link'}
-              </button>
+          {/* Theme */}
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: '#6B7280', marginBottom: 10, textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Theme</div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {(['classic', 'neon', 'soft'] as const).map(t => (
+                <button key={t} onClick={() => setSettingsForm(p => ({ ...p, theme: t }))} style={{
+                  flex: 1, padding: '8px 4px', borderRadius: 8, border: settingsForm.theme === t ? `2px solid ${accent}` : '2px solid rgba(255,255,255,0.08)',
+                  background: settingsForm.theme === t ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.03)',
+                  color: settingsForm.theme === t ? '#fff' : '#9CA3AF', fontSize: 12, fontWeight: 500, cursor: 'pointer',
+                  textTransform: 'capitalize' as const,
+                }}>
+                  {t}
+                </button>
+              ))}
             </div>
           </div>
-        )}
+
+          {/* Layout options */}
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: '#6B7280', marginBottom: 10, textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Layout</div>
+            
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 500, color: '#9CA3AF', marginBottom: 4, textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Card Style</label>
+              <select value={settingsForm.link_style} onChange={e => setSettingsForm(p => ({ ...p, link_style: e.target.value as 'default' | 'overlay' }))}
+                style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: `1px solid ${inputBorder}`, background: inputBg, color: '#fff', fontSize: 13, outline: 'none', fontFamily: 'inherit' }}>
+                <option value="overlay">Overlay</option>
+                <option value="default">Default</option>
+              </select>
+            </div>
+
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 500, color: '#9CA3AF', marginBottom: 4, textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Grid</label>
+              <select value={settingsForm.layout} onChange={e => setSettingsForm(p => ({ ...p, layout: e.target.value as 'list' | 'grid' }))}
+                style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: `1px solid ${inputBorder}`, background: inputBg, color: '#fff', fontSize: 13, outline: 'none', fontFamily: 'inherit' }}>
+                <option value="list">Single Column</option>
+                <option value="grid">Two Columns</option>
+              </select>
+            </div>
+
+            <Toggle label="Blurred Background" value={!!settingsForm.show_blurred_bg} onChange={v => setSettingsForm(p => ({ ...p, show_blurred_bg: v ? 1 : 0 }))} />
+            <Toggle label="Show Bio" value={!!settingsForm.show_bio} onChange={v => setSettingsForm(p => ({ ...p, show_bio: v ? 1 : 0 }))} />
+          </div>
+        </div>
       </div>
     </div>
   )
