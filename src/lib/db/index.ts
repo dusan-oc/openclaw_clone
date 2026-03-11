@@ -31,6 +31,9 @@ function initDb() {
       layout TEXT NOT NULL DEFAULT 'list' CHECK(layout IN ('list','grid')),
       show_blurred_bg INTEGER NOT NULL DEFAULT 1,
       show_bio INTEGER NOT NULL DEFAULT 1,
+      bg_mode TEXT NOT NULL DEFAULT 'blur' CHECK(bg_mode IN ('blur','color','ai')),
+      bg_value TEXT,
+      bg_prompt TEXT,
       created_at INTEGER NOT NULL
     );
 

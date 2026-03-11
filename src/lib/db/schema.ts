@@ -15,6 +15,9 @@ export const users = sqliteTable('users', {
   layout: text('layout', { enum: ['list', 'grid'] }).notNull().default('list'),
   show_blurred_bg: integer('show_blurred_bg').notNull().default(1),
   show_bio: integer('show_bio').notNull().default(1),
+  bg_mode: text('bg_mode', { enum: ['blur', 'color', 'ai'] }).notNull().default('blur'),
+  bg_value: text('bg_value'),
+  bg_prompt: text('bg_prompt'),
   created_at: integer('created_at').notNull(),
 })
 

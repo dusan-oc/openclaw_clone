@@ -96,6 +96,9 @@ export default async function UserProfilePage({ params }: Props) {
     layout: user.layout ?? 'list' as const,
     show_blurred_bg: user.show_blurred_bg ?? 1,
     show_bio: user.show_bio ?? 1,
+    bg_mode: (user.bg_mode ?? 'blur') as 'blur' | 'color' | 'ai',
+    bg_value: user.bg_value ?? null,
+    bg_prompt: user.bg_prompt ?? null,
   }
 
   const typedLinks = userLinks.map(l => ({

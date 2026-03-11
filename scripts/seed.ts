@@ -30,6 +30,8 @@ async function upsertUser(data: {
   layout?: 'list' | 'grid'
   show_blurred_bg?: number
   show_bio?: number
+  bg_mode?: 'blur' | 'color' | 'ai'
+  bg_value?: string
 }) {
   const existing = db.select().from(users).where(eq(users.email, data.email)).get()
   if (existing) {
@@ -51,6 +53,9 @@ async function upsertUser(data: {
     layout: data.layout ?? 'list',
     show_blurred_bg: data.show_blurred_bg ?? 1,
     show_bio: data.show_bio ?? 1,
+    bg_mode: data.bg_mode ?? 'blur',
+    bg_value: data.bg_value ?? null,
+    bg_prompt: null,
     enabled: 1,
     created_at: Math.floor(Date.now() / 1000),
   }).returning().get()

@@ -56,6 +56,9 @@ type User = {
   layout: 'list' | 'grid'
   show_blurred_bg: number
   show_bio: number
+  bg_mode: 'blur' | 'color' | 'ai'
+  bg_value: string | null
+  bg_prompt: string | null
 }
 
 type Link = {
@@ -365,15 +368,33 @@ export default function ProfilePage({ user, links }: Props) {
   const variant: Variant = user.theme === 'neon' ? 'neon' : user.theme === 'soft' ? 'soft' : 'dark'
   const displayName = user.display_name ?? user.username
   const avatarUrl = user.avatar_url || ''
-  const showBg = user.show_blurred_bg === 1
   const showBio = user.show_bio === 1
   const isSoft = variant === 'soft'
   const headerLinks = enabledLinks.filter(l => l.show_in_header === 1)
+  const bgMode = user.bg_mode || 'blur'
+
+  // Parse AI background CSS if applicable
+  let aiBgStyles: Record<string, string> = {}
+  let aiBgKeyframes = ''
+  if (bgMode === 'ai' && user.bg_value) {
+    try {
+      const parsed = JSON.parse(user.bg_value)
+      if (parsed['@keyframes']) {
+        aiBgKeyframes = `@keyframes ${parsed['@keyframes']}`
+        delete parsed['@keyframes']
+      }
+      aiBgStyles = parsed
+    } catch { /* fallback to default */ }
+  }
 
   // Page background
-  const pageBg = isSoft
-    ? '#FFF5FA'
-    : '#000'
+  const pageBg = bgMode === 'color' && user.bg_value
+    ? user.bg_value
+    : bgMode === 'ai' && aiBgStyles.background
+      ? aiBgStyles.background
+      : isSoft ? '#FFF5FA' : '#000'
+
+  const showBlurBg = bgMode === 'blur' && user.show_blurred_bg === 1
 
   // Bio color
   const bioColor = isSoft ? '#6b7280' : variant === 'neon' ? '#c4b5fd' : 'rgba(255,255,255,0.55)'
@@ -383,19 +404,23 @@ export default function ProfilePage({ user, links }: Props) {
     {warningUrl && <ContentWarningModal url={warningUrl} onClose={() => setWarningUrl(null)} />}
     <div style={{
       fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-      background: pageBg, minHeight: '100vh',
+      minHeight: '100vh',
       display: 'flex', justifyContent: 'center',
       overflowX: 'hidden',
+      ...(bgMode === 'ai' && Object.keys(aiBgStyles).length > 0
+        ? aiBgStyles
+        : { background: pageBg }),
     }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: ${pageBg}; }
+        body { background: ${bgMode === 'color' && user.bg_value ? user.bg_value : isSoft ? '#FFF5FA' : '#000'}; }
         ${variant === 'neon' ? `@keyframes neonPulse { 0%,100%{opacity:0.6}50%{opacity:1} }` : ''}
+        ${aiBgKeyframes}
       `}</style>
 
       {/* ── Blurred Background ── */}
-      {showBg && avatarUrl && (
+      {showBlurBg && avatarUrl && (
         <>
           <div style={{
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,

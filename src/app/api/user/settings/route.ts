@@ -12,7 +12,7 @@ export async function PATCH(req: NextRequest) {
   const userId = parseInt(session.user.id)
 
   const body = await req.json()
-  const { display_name, bio, avatar_url, theme, link_style, layout, show_blurred_bg, show_bio } = body
+  const { display_name, bio, avatar_url, theme, link_style, layout, show_blurred_bg, show_bio, bg_mode, bg_value, bg_prompt } = body
 
   const updates: Partial<typeof users.$inferInsert> = {}
   if (display_name !== undefined) updates.display_name = display_name
@@ -39,6 +39,14 @@ export async function PATCH(req: NextRequest) {
   }
   if (show_blurred_bg !== undefined) updates.show_blurred_bg = show_blurred_bg ? 1 : 0
   if (show_bio !== undefined) updates.show_bio = show_bio ? 1 : 0
+  if (bg_mode !== undefined) {
+    if (!['blur', 'color', 'ai'].includes(bg_mode)) {
+      return NextResponse.json({ error: 'Invalid bg_mode' }, { status: 400 })
+    }
+    updates.bg_mode = bg_mode
+  }
+  if (bg_value !== undefined) updates.bg_value = bg_value
+  if (bg_prompt !== undefined) updates.bg_prompt = bg_prompt
 
   const updated = db
     .update(users)

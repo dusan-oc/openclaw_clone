@@ -30,7 +30,21 @@ type User = {
   layout: 'list' | 'grid'
   show_blurred_bg: number
   show_bio: number
+  bg_mode: 'blur' | 'color' | 'ai'
+  bg_value: string | null
+  bg_prompt: string | null
 }
+
+const BG_PRESETS = [
+  { label: 'Black', value: '#000000' },
+  { label: 'Dark Navy', value: '#0a0a1a' },
+  { label: 'Deep Purple', value: '#1a0533' },
+  { label: 'Charcoal', value: '#1a1a1a' },
+  { label: 'Midnight Blue', value: '#0d1b2a' },
+  { label: 'Dark Teal', value: '#0a1f1f' },
+  { label: 'Wine', value: '#2a0a1a' },
+  { label: 'Soft Pink', value: '#FFF5FA' },
+]
 
 const sidebarBg = 'rgba(15, 10, 26, 0.98)'
 const inputBg = 'rgba(255,255,255,0.06)'
@@ -98,8 +112,13 @@ export default function DashboardClient({ user: initialUser }: { user: User }) {
     layout: initialUser.layout ?? 'list' as const,
     show_blurred_bg: initialUser.show_blurred_bg ?? 1,
     show_bio: initialUser.show_bio ?? 1,
+    bg_mode: initialUser.bg_mode ?? 'blur' as 'blur' | 'color' | 'ai',
+    bg_value: initialUser.bg_value ?? '',
+    bg_prompt: initialUser.bg_prompt ?? '',
   })
   const [linkCopied, setLinkCopied] = useState(false)
+  const [generatingBg, setGeneratingBg] = useState(false)
+  const [bgPromptInput, setBgPromptInput] = useState(initialUser.bg_prompt ?? '')
 
   // Inline editing
   const [editingId, setEditingId] = useState<number | null>(null)
@@ -395,6 +414,9 @@ export default function DashboardClient({ user: initialUser }: { user: User }) {
                   layout: settingsForm.layout,
                   show_blurred_bg: settingsForm.show_blurred_bg,
                   show_bio: settingsForm.show_bio,
+                  bg_mode: settingsForm.bg_mode,
+                  bg_value: settingsForm.bg_value || null,
+                  bg_prompt: settingsForm.bg_prompt || null,
                 }}
                 links={links}
               />
@@ -447,8 +469,101 @@ export default function DashboardClient({ user: initialUser }: { user: User }) {
               </select>
             </div>
 
-            <Toggle label="Blurred Background" value={!!settingsForm.show_blurred_bg} onChange={v => updateSettings(p => ({ ...p, show_blurred_bg: v ? 1 : 0 }))} />
             <Toggle label="Show Bio" value={!!settingsForm.show_bio} onChange={v => updateSettings(p => ({ ...p, show_bio: v ? 1 : 0 }))} />
+          </div>
+
+          {/* Background */}
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: '#6B7280', marginBottom: 10, textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Background</div>
+            
+            {/* Mode tabs */}
+            <div style={{ display: 'flex', gap: 4, marginBottom: 12 }}>
+              {([['blur', '🖼 Blur'], ['color', '🎨 Color'], ['ai', '✨ AI']] as const).map(([mode, label]) => (
+                <button key={mode} onClick={() => updateSettings(p => ({ ...p, bg_mode: mode, ...(mode === 'blur' ? { show_blurred_bg: 1 } : {}) }))}
+                  style={{
+                    flex: 1, padding: '8px 4px', borderRadius: 8,
+                    border: settingsForm.bg_mode === mode ? `2px solid ${accent}` : '2px solid rgba(255,255,255,0.08)',
+                    background: settingsForm.bg_mode === mode ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.03)',
+                    color: settingsForm.bg_mode === mode ? '#fff' : '#9CA3AF',
+                    fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                  }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {/* Blur mode */}
+            {settingsForm.bg_mode === 'blur' && (
+              <p style={{ fontSize: 12, color: '#9CA3AF', lineHeight: 1.5 }}>
+                Uses your hero photo as a blurred background.
+              </p>
+            )}
+
+            {/* Color mode */}
+            {settingsForm.bg_mode === 'color' && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+                {BG_PRESETS.map(p => (
+                  <button key={p.value} onClick={() => updateSettings(prev => ({ ...prev, bg_value: p.value, show_blurred_bg: 0 }))}
+                    title={p.label}
+                    style={{
+                      width: '100%', aspectRatio: '1', borderRadius: 8, cursor: 'pointer',
+                      background: p.value,
+                      border: settingsForm.bg_value === p.value ? `2px solid ${accent}` : '2px solid rgba(255,255,255,0.1)',
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* AI mode */}
+            {settingsForm.bg_mode === 'ai' && (
+              <div>
+                <textarea
+                  value={bgPromptInput}
+                  onChange={e => setBgPromptInput(e.target.value)}
+                  placeholder="Describe your background... e.g. 'dark aurora borealis with purple and teal'"
+                  rows={3}
+                  style={{
+                    width: '100%', padding: '10px 12px', borderRadius: 8,
+                    border: `1px solid ${inputBorder}`, background: inputBg,
+                    color: '#fff', fontSize: 13, fontFamily: 'inherit',
+                    outline: 'none', resize: 'vertical',
+                  }}
+                />
+                <button
+                  disabled={generatingBg || !bgPromptInput.trim()}
+                  onClick={async () => {
+                    setGeneratingBg(true)
+                    try {
+                      const res = await fetch('/api/user/generate-bg', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ prompt: bgPromptInput.trim() }),
+                      })
+                      if (res.ok) {
+                        const data = await res.json()
+                        updateSettings(p => ({
+                          ...p,
+                          bg_mode: 'ai' as const,
+                          bg_value: data.bg_value,
+                          bg_prompt: data.bg_prompt,
+                          show_blurred_bg: 0,
+                        }))
+                      }
+                    } finally {
+                      setGeneratingBg(false)
+                    }
+                  }}
+                  style={{
+                    width: '100%', marginTop: 8, padding: '10px 0', borderRadius: 8,
+                    border: 'none', cursor: generatingBg ? 'wait' : 'pointer',
+                    background: generatingBg ? 'rgba(99,102,241,0.3)' : accent,
+                    color: '#fff', fontSize: 13, fontWeight: 600, fontFamily: 'inherit',
+                  }}>
+                  {generatingBg ? '✨ Generating…' : '✨ Generate Background'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
