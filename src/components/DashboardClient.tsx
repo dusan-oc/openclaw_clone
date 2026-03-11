@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { signOut } from 'next-auth/react'
 import Link from 'next/link'
 import { Copy, Check, Pencil, X as XIcon, Loader2, ChevronUp, ChevronDown } from 'lucide-react'
+import ProfilePage from './ProfilePage'
 
 type LinkItem = {
   id: number
@@ -76,8 +77,6 @@ function Toggle({ label, value, onChange }: { label: string; value: boolean; onC
 export default function DashboardClient({ user: initialUser }: { user: User }) {
   const [links, setLinks] = useState<LinkItem[]>([])
   const [user, setUser] = useState<User>(initialUser)
-  const iframeRef = useRef<HTMLIFrameElement>(null)
-  const [iframeKey, setIframeKey] = useState(0)
 
   // Add link form
   const [newTitle, setNewTitle] = useState('')
@@ -109,7 +108,7 @@ export default function DashboardClient({ user: initialUser }: { user: User }) {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
 
   const refreshPreview = useCallback(() => {
-    setIframeKey(k => k + 1)
+    // No-op: preview updates automatically from local state
   }, [])
 
   const fetchLinks = useCallback(async () => {
@@ -352,7 +351,7 @@ export default function DashboardClient({ user: initialUser }: { user: User }) {
           )}
         </div>
 
-        {/* CENTER — Live Preview */}
+        {/* CENTER — Live Preview (inline, no iframe) */}
         <div style={{
           flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start',
           padding: 24, background: '#0A0612', overflow: 'auto',
@@ -361,18 +360,30 @@ export default function DashboardClient({ user: initialUser }: { user: User }) {
             Live Preview — glimr.io/{user.username}
           </div>
           <div style={{
-            width: '100%', maxWidth: 430, flex: 1, borderRadius: 16,
+            width: '100%', maxWidth: 430, borderRadius: 16,
             border: '1px solid rgba(255,255,255,0.08)',
             boxShadow: '0 0 60px rgba(99, 102, 241, 0.08)',
             overflow: 'hidden', background: '#000',
+            position: 'relative',
+            /* clip fixed-position blurred bg inside this container */
+            clipPath: 'inset(0 round 16px)',
           }}>
-            <iframe
-              ref={iframeRef}
-              key={iframeKey}
-              src={`/${user.username}?t=${iframeKey}`}
-              style={{ width: '100%', height: '100%', border: 'none', minHeight: '80vh' }}
-              title="Profile Preview"
-            />
+            <div style={{ position: 'relative' }}>
+              <ProfilePage
+                user={{
+                  ...user,
+                  display_name: settingsForm.display_name || null,
+                  bio: settingsForm.bio || null,
+                  avatar_url: settingsForm.avatar_url || null,
+                  theme: settingsForm.theme,
+                  link_style: settingsForm.link_style,
+                  layout: settingsForm.layout,
+                  show_blurred_bg: settingsForm.show_blurred_bg,
+                  show_bio: settingsForm.show_bio,
+                }}
+                links={links}
+              />
+            </div>
           </div>
         </div>
 
