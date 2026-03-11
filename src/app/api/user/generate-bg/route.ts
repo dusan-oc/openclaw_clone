@@ -38,15 +38,20 @@ export async function POST(req: NextRequest) {
 Rules:
 - Output ONLY valid JSON, no markdown, no explanation
 - The JSON keys are CSS property names in camelCase (e.g. "background", "backgroundSize", "animation")
-- Use CSS gradients, colors, and patterns. Be creative and make it beautiful.
-- If you use animations, include a "@keyframes" key with the raw CSS keyframes string (e.g. "@keyframes": "bgMove { 0% { background-position: 0% 50% } 50% { background-position: 100% 50% } 100% { background-position: 0% 50% } }")
-- The background sits behind a dark profile card, so make it atmospheric and moody
-- Keep it performant — no heavy effects, prefer gradients and subtle animations
-- Always make the result look premium and polished
+- You can use: CSS gradients, radial gradients, conic gradients, AND inline SVG patterns
+- For shapes (hearts, stars, flowers, butterflies, sparkles, etc.), use inline SVG as data URIs in the background property: url("data:image/svg+xml,%3Csvg...%3C/svg%3E")
+- Layer multiple backgrounds: SVG patterns on top, gradients underneath. Example: background: url("data:image/svg+xml,...") repeat, linear-gradient(...)
+- SVGs should be URL-encoded (use %23 for #, %3C for <, %3E for >, etc.)
+- Make SVG patterns semi-transparent so the gradient shows through
+- Scatter/repeat patterns at various sizes for depth — use backgroundSize with multiple values
+- If you use animations, include a "@keyframes" key with the raw CSS keyframes string
+- The background sits behind a dark profile card, so make it atmospheric and premium
+- Be creative! Hearts, flowers, sparkles, geometric shapes, constellations, waves — whatever fits the vibe
+- Always make the result look premium, polished, and visually rich — not flat or boring
 - ONLY output the JSON object, nothing else
 
-Example output:
-{"background":"linear-gradient(135deg, #0c0015 0%, #1a0533 25%, #2d1b69 50%, #1a0533 75%, #0c0015 100%)","backgroundSize":"400% 400%","animation":"bgMove 15s ease infinite","@keyframes":"bgMove { 0% { background-position: 0% 50% } 50% { background-position: 100% 50% } 100% { background-position: 0% 50% } }"}`,
+Example with SVG pattern + gradient:
+{"background":"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Cpath d='M30 15 C30 5,20 0,15 5 C5 15,15 25,30 40 C45 25,55 15,45 5 C40 0,30 5,30 15Z' fill='rgba(255,105,180,0.08)'/%3E%3C/svg%3E\") repeat, linear-gradient(135deg, #0c0015 0%, #2d1b69 50%, #0c0015 100%)","backgroundSize":"60px 60px, 400% 400%","animation":"bgMove 20s ease infinite","@keyframes":"bgMove { 0% { background-position: 0px 0px, 0% 50% } 50% { background-position: 30px 30px, 100% 50% } 100% { background-position: 0px 0px, 0% 50% } }"}`,
         messages: [
           { role: 'user', content: `Generate a beautiful CSS background for this description: "${prompt}"` },
         ],
