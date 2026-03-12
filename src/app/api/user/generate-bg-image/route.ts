@@ -3,7 +3,7 @@ import { auth } from '@/lib/auth'
 import { db } from '@/lib/db/index'
 import { users } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
-import { writeFileSync } from 'fs'
+import { writeFileSync, mkdirSync } from 'fs'
 import { join } from 'path'
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY
@@ -71,8 +71,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Save to public/backgrounds/
+    const bgDir = join(process.cwd(), 'public', 'backgrounds')
+    mkdirSync(bgDir, { recursive: true })
     const filename = `${userId}-${Date.now()}.png`
-    const filepath = join(process.cwd(), 'public', 'backgrounds', filename)
+    const filepath = join(bgDir, filename)
     writeFileSync(filepath, Buffer.from(b64, 'base64'))
 
     const bgPath = `/backgrounds/${filename}`

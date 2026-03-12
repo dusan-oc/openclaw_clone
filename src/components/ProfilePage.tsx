@@ -421,7 +421,6 @@ export default function ProfilePage({ user, links }: Props) {
         backgroundSize: 'cover',
         backgroundPosition: 'center top',
         backgroundRepeat: 'no-repeat',
-        backgroundAttachment: 'fixed',
       } : {}),
     }}>
       <style>{`
