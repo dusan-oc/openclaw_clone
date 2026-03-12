@@ -388,16 +388,15 @@ export default function ProfilePage({ user, links }: Props) {
     return () => observer.disconnect()
   }, [])
 
-  // Scroll-based hero darkening overlay
+  // Scroll-based hero darkening — matches LinkMe's formula
   useEffect(() => {
     const handleScroll = () => {
       if (!heroRef.current) return
-      const rect = heroRef.current.getBoundingClientRect()
-      const heroHeight = heroRef.current.offsetHeight
-      // Start darkening when scrolling begins, max darkness when hero is mostly covered
-      const scrolled = Math.max(0, -rect.top)
-      const progress = Math.min(1, scrolled / (heroHeight * 0.7))
-      setHeroOverlay(progress * 0.85) // max 85% dark
+      const h = heroRef.current.offsetHeight || 1
+      const s = window.scrollY
+      // LinkMe formula: Math.min(0.95, 2.6 * Math.min(1, Math.max(0, 1 - (h - s) / h)))
+      const t = Math.min(0.95, 2.6 * Math.min(1, Math.max(0, 1 - (h - s) / h)))
+      setHeroOverlay(t)
     }
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
@@ -568,13 +567,19 @@ export default function ProfilePage({ user, links }: Props) {
                 {displayName[0]?.toUpperCase()}
               </div>
             )}
-            {/* Dark overlay that increases on scroll */}
+            {/* Bottom shadow — darkens lower portion of hero BEFORE scrolling */}
+            <div style={{
+              position: 'absolute', bottom: 0, left: 0, right: 0,
+              height: '55%',
+              backgroundImage: 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.03) 20%, rgba(0,0,0,0.15) 45%, rgba(0,0,0,0.4) 70%, rgba(0,0,0,0.7) 90%, rgba(0,0,0,0.85) 100%)',
+              pointerEvents: 'none',
+            }} />
+            {/* Dark overlay that increases on scroll — LinkMe formula */}
             <div style={{
               position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-              backgroundColor: '#000',
+              backgroundColor: isSoft ? '#FFF5FA' : '#000',
               opacity: heroOverlay,
               pointerEvents: 'none',
-              transition: 'opacity 0.05s linear',
             }} />
           </div>
 
