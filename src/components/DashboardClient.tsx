@@ -118,7 +118,7 @@ function PreviewArea({ settingsForm, user, links }: {
         // Image mode — show the generated image as background
         previewStyle = {
           backgroundImage: `url(${parsed.url})`,
-          backgroundSize: 'cover',
+          backgroundSize: 'contain',
           backgroundPosition: 'center top',
           backgroundRepeat: 'no-repeat',
         }

@@ -418,9 +418,10 @@ export default function ProfilePage({ user, links }: Props) {
       ...(bgMode === 'ai' && aiBgCss ? {} : { background: pageBg }),
       ...(aiBgImageUrl ? {
         backgroundImage: `url(${aiBgImageUrl})`,
-        backgroundSize: 'cover',
+        backgroundSize: 'contain',
         backgroundPosition: 'center top',
         backgroundRepeat: 'no-repeat',
+        backgroundColor: '#000',
       } : {}),
     }}>
       <style>{`
