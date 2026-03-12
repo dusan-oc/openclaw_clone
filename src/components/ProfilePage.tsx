@@ -523,8 +523,6 @@ export default function ProfilePage({ user, links }: Props) {
         <div style={{
           position: 'relative',
           margin: '8px 4px 0 4px',
-          borderRadius: 28,
-          overflow: 'hidden',
           backgroundColor: isSoft ? '#FFF5FA' : '#0a0a0a',
           boxShadow: isSoft
             ? '0 4px 30px rgba(0,0,0,0.08)'
@@ -532,7 +530,7 @@ export default function ProfilePage({ user, links }: Props) {
           minHeight: '95vh',
         }}>
           {/* Hero image — sticky so content scrolls over it */}
-          <div ref={heroRef} style={{ position: 'sticky', top: 0, zIndex: 1, overflow: 'hidden' }}>
+          <div ref={heroRef} style={{ position: 'sticky', top: 0, zIndex: 1, overflow: 'hidden', borderTopLeftRadius: 28, borderTopRightRadius: 28 }}>
             {avatarUrl ? (
               <img src={avatarUrl} alt={displayName} style={{
                 width: '100%', aspectRatio: '3 / 4', maxHeight: 580, minHeight: 360,
@@ -629,7 +627,10 @@ export default function ProfilePage({ user, links }: Props) {
           <div style={{
             position: 'relative', zIndex: 2,
             backgroundColor: isSoft ? '#FFF5FA' : '#0a0a0a',
-            padding: '4px 14px 32px',
+            borderTopLeftRadius: 24,
+            borderTopRightRadius: 24,
+            marginTop: -24,
+            padding: '16px 14px 32px',
             display: 'flex', flexDirection: 'column', gap: 8,
           }}>
             <LinksSection
@@ -641,7 +642,7 @@ export default function ProfilePage({ user, links }: Props) {
           </div>
 
           {/* ════ FOOTER ════ */}
-          <div style={{ position: 'relative', zIndex: 2, backgroundColor: isSoft ? '#FFF5FA' : '#0a0a0a', padding: '20px 14px 24px', textAlign: 'center' }}>
+          <div style={{ position: 'relative', zIndex: 2, backgroundColor: isSoft ? '#FFF5FA' : '#0a0a0a', borderBottomLeftRadius: 28, borderBottomRightRadius: 28, padding: '20px 14px 24px', textAlign: 'center' }}>
             <a
               href="https://glimr.io"
               style={{
