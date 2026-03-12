@@ -365,7 +365,9 @@ function LinksSection({ links, variant, linkStyle, onWarning }: {
 export default function ProfilePage({ user, links }: Props) {
   const [warningUrl, setWarningUrl] = useState<string | null>(null)
   const [showStickyHeader, setShowStickyHeader] = useState(false)
+  const [heroOpacity, setHeroOpacity] = useState(1)
   const heroRef = useRef<HTMLDivElement>(null)
+  const nameRef = useRef<HTMLDivElement>(null)
   const enabledLinks = links.filter(l => l.enabled === 1)
   const variant: Variant = user.theme === 'neon' ? 'neon' : user.theme === 'soft' ? 'soft' : 'dark'
   const displayName = user.display_name ?? user.username
@@ -375,15 +377,37 @@ export default function ProfilePage({ user, links }: Props) {
   const headerLinks = enabledLinks.filter(l => l.show_in_header === 1)
   const bgMode = user.bg_mode || 'blur'
 
-  // Intersection observer for sticky header
+  // Intersection observer for sticky header (triggers when name section leaves viewport)
   useEffect(() => {
-    if (!heroRef.current) return
+    if (!nameRef.current) return
     const observer = new IntersectionObserver(
       ([entry]) => setShowStickyHeader(!entry.isIntersecting),
       { threshold: 0, rootMargin: '-48px 0px 0px 0px' }
     )
-    observer.observe(heroRef.current)
+    observer.observe(nameRef.current)
     return () => observer.disconnect()
+  }, [])
+
+  // Scroll-based hero opacity fade
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!heroRef.current) return
+      const rect = heroRef.current.getBoundingClientRect()
+      const heroHeight = heroRef.current.offsetHeight
+      // Start fading when bottom half of hero is being covered
+      const fadeStart = heroHeight * 0.5
+      const fadeEnd = heroHeight * 0.05
+      const visibleBottom = rect.bottom
+      if (visibleBottom <= fadeEnd) {
+        setHeroOpacity(0)
+      } else if (visibleBottom >= fadeStart) {
+        setHeroOpacity(1)
+      } else {
+        setHeroOpacity((visibleBottom - fadeEnd) / (fadeStart - fadeEnd))
+      }
+    }
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
   // Parse AI background if applicable
@@ -529,8 +553,12 @@ export default function ProfilePage({ user, links }: Props) {
             : '0 0 50px rgba(0,0,0,0.4)',
           minHeight: '95vh',
         }}>
-          {/* Hero image — sticky so content scrolls over it */}
-          <div ref={heroRef} style={{ position: 'sticky', top: 0, zIndex: 1, overflow: 'hidden', borderTopLeftRadius: 28, borderTopRightRadius: 28 }}>
+          {/* Hero IMAGE only — sticky, fades out as content scrolls over */}
+          <div ref={heroRef} style={{
+            position: 'sticky', top: 0, zIndex: 1,
+            overflow: 'hidden', borderTopLeftRadius: 28, borderTopRightRadius: 28,
+            opacity: heroOpacity, transition: 'opacity 0.05s linear',
+          }}>
             {avatarUrl ? (
               <img src={avatarUrl} alt={displayName} style={{
                 width: '100%', aspectRatio: '3 / 4', maxHeight: 580, minHeight: 360,
@@ -548,59 +576,55 @@ export default function ProfilePage({ user, links }: Props) {
                 {displayName[0]?.toUpperCase()}
               </div>
             )}
+          </div>
 
-            {/* Dramatic bottom gradient */}
-            <div style={{
-              position: 'absolute', bottom: 0, left: 0, right: 0, height: '65%',
-              backgroundImage: isSoft
-                ? 'linear-gradient(to bottom, transparent 0%, rgba(255,245,250,0.05) 25%, rgba(255,245,250,0.5) 60%, #FFF5FA 100%)'
-                : 'linear-gradient(to bottom, transparent 0%, rgba(10,10,10,0.1) 25%, rgba(10,10,10,0.5) 55%, rgba(10,10,10,0.85) 80%, #0a0a0a 100%)',
-            }} />
-
-            {/* Name + badge + handle + header icons + bio overlaid on hero */}
-            <div style={{
-              position: 'absolute', bottom: 24, left: 0, right: 0,
-              textAlign: 'center', zIndex: 3,
-            }}>
+          {/* ════ SCROLLABLE CONTENT — name, bio, icons, links ════
+              This entire section scrolls up over the hero image */}
+          <div style={{
+            position: 'relative', zIndex: 2,
+            backgroundColor: isSoft ? '#FFF5FA' : '#0a0a0a',
+            borderTopLeftRadius: 28,
+            borderTopRightRadius: 28,
+            marginTop: -80,
+          }}>
+            {/* Name + badge + handle + icons + bio */}
+            <div ref={nameRef} style={{ textAlign: 'center', padding: '28px 20px 8px' }}>
               <div style={{
-                fontSize: 36, fontWeight: 900,
+                fontSize: 32, fontWeight: 900,
                 color: isSoft ? '#1a1a2e' : '#fff',
                 letterSpacing: -0.8,
                 display: 'inline-flex', alignItems: 'center', gap: 8,
-                textShadow: isSoft ? '0 1px 12px rgba(255,255,255,0.5)' : '0 2px 20px rgba(0,0,0,0.5)',
               }}>
                 {displayName}
                 <VerifiedBadge />
               </div>
               <div style={{
                 fontSize: 15,
-                color: isSoft ? 'rgba(26,26,46,0.5)' : 'rgba(255,255,255,0.55)',
+                color: isSoft ? 'rgba(26,26,46,0.5)' : 'rgba(255,255,255,0.45)',
                 marginTop: 4, fontWeight: 400,
-                textShadow: isSoft ? 'none' : '0 1px 8px rgba(0,0,0,0.4)',
               }}>
                 @{user.username}
               </div>
               {headerLinks.length > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginTop: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginTop: 12 }}>
                   {headerLinks.map(link => {
                     const icon = getPlatformIcon(link.url, link.icon)
                     return (
                       <a key={link.id}
                         {...linkProps(link, setWarningUrl)}
                         style={{
-                          width: 34, height: 34, borderRadius: '50%',
+                          width: 36, height: 36, borderRadius: '50%',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          backgroundColor: isSoft ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.15)',
-                          border: isSoft ? '1px solid rgba(0,0,0,0.08)' : '1px solid rgba(255,255,255,0.12)',
-                          backdropFilter: 'blur(8px)',
+                          backgroundColor: isSoft ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.1)',
+                          border: isSoft ? '1px solid rgba(0,0,0,0.06)' : '1px solid rgba(255,255,255,0.08)',
                           transition: 'transform 0.2s, background-color 0.2s',
                           cursor: 'pointer', textDecoration: 'none',
                         }}
-                        onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.15)'; e.currentTarget.style.backgroundColor = isSoft ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.25)' }}
-                        onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.backgroundColor = isSoft ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.15)' }}
+                        onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.1)'; e.currentTarget.style.backgroundColor = isSoft ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.18)' }}
+                        onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.backgroundColor = isSoft ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.1)' }}
                       >
                         {icon.type === 'platform' && icon.svg ? (
-                          <span style={{ width: 17, height: 17, color: isSoft ? '#1a1a2e' : '#fff' }} dangerouslySetInnerHTML={{ __html: icon.svg }} />
+                          <span style={{ width: 18, height: 18, color: isSoft ? '#1a1a2e' : '#fff' }} dangerouslySetInnerHTML={{ __html: icon.svg }} />
                         ) : (
                           <span style={{ fontSize: 16 }}>{icon.emoji || link.icon}</span>
                         )}
@@ -611,34 +635,28 @@ export default function ProfilePage({ user, links }: Props) {
               )}
               {showBio && user.bio && (
                 <p style={{
-                  color: isSoft ? 'rgba(26,26,46,0.45)' : 'rgba(255,255,255,0.5)',
+                  color: isSoft ? 'rgba(26,26,46,0.5)' : 'rgba(255,255,255,0.45)',
                   fontSize: 13, lineHeight: 1.5,
-                  marginTop: 6, padding: '0 24px',
-                  textShadow: isSoft ? 'none' : '0 1px 6px rgba(0,0,0,0.3)',
+                  marginTop: 8,
                   display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
                 }}>
                   {user.bio}
                 </p>
               )}
             </div>
-          </div>
 
-          {/* ════ LINKS — scrolls over the hero ════ */}
-          <div style={{
-            position: 'relative', zIndex: 2,
-            backgroundColor: isSoft ? '#FFF5FA' : '#0a0a0a',
-            borderTopLeftRadius: 24,
-            borderTopRightRadius: 24,
-            marginTop: -24,
-            padding: '16px 14px 32px',
-            display: 'flex', flexDirection: 'column', gap: 8,
-          }}>
-            <LinksSection
-              links={enabledLinks}
-              variant={variant}
-              linkStyle={user.link_style}
-              onWarning={setWarningUrl}
-            />
+            {/* Links */}
+            <div style={{
+              padding: '8px 14px 32px',
+              display: 'flex', flexDirection: 'column', gap: 8,
+            }}>
+              <LinksSection
+                links={enabledLinks}
+                variant={variant}
+                linkStyle={user.link_style}
+                onWarning={setWarningUrl}
+              />
+            </div>
           </div>
 
           {/* ════ FOOTER ════ */}
