@@ -93,6 +93,84 @@ function Toggle({ label, value, onChange }: { label: string; value: boolean; onC
   )
 }
 
+function PreviewArea({ settingsForm, user, links }: {
+  settingsForm: {
+    display_name: string; bio: string; avatar_url: string; theme: 'classic' | 'neon' | 'soft'
+    link_style: 'default' | 'overlay'; layout: 'list' | 'grid'; show_blurred_bg: number; show_bio: number
+    bg_mode: 'blur' | 'color' | 'ai'; bg_value: string; bg_prompt: string
+  }
+  user: User
+  links: LinkItem[]
+}) {
+  const isSoft = settingsForm.theme === 'soft'
+
+  // Parse AI background for the preview area
+  let previewBg = '#0A0612'
+  let previewStyle: React.CSSProperties = {}
+  let keyframesCss = ''
+
+  if (settingsForm.bg_mode === 'color' && settingsForm.bg_value) {
+    previewBg = settingsForm.bg_value
+  } else if (settingsForm.bg_mode === 'ai' && settingsForm.bg_value) {
+    try {
+      const parsed = JSON.parse(settingsForm.bg_value)
+      const copy = { ...parsed }
+      if (copy['@keyframes']) {
+        keyframesCss = `@keyframes ${copy['@keyframes']}`
+        delete copy['@keyframes']
+      }
+      // Apply all CSS properties from the AI generation
+      for (const [key, val] of Object.entries(copy)) {
+        const cssProp = key.replace(/([A-Z])/g, '-$1').toLowerCase()
+        ;(previewStyle as Record<string, unknown>)[key] = val
+      }
+    } catch { /* fallback */ }
+    previewBg = ''
+  } else if (settingsForm.bg_mode === 'blur') {
+    previewBg = isSoft ? '#FFF5FA' : '#111'
+  }
+
+  return (
+    <div style={{
+      flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start',
+      padding: 24, overflow: 'auto', position: 'relative',
+      background: previewBg || undefined,
+      ...previewStyle,
+    }}>
+      {keyframesCss && <style>{keyframesCss}</style>}
+      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginBottom: 12, textAlign: 'center' as const, position: 'relative', zIndex: 2 }}>
+        Live Preview — glimr.io/{user.username}
+      </div>
+      <div style={{
+        width: '100%', maxWidth: 430, borderRadius: 16,
+        border: '1px solid rgba(255,255,255,0.08)',
+        boxShadow: '0 0 60px rgba(99, 102, 241, 0.08)',
+        overflow: 'hidden',
+        position: 'relative', zIndex: 2,
+        clipPath: 'inset(0 round 16px)',
+      }}>
+        <ProfilePage
+          user={{
+            ...user,
+            display_name: settingsForm.display_name || null,
+            bio: settingsForm.bio || null,
+            avatar_url: settingsForm.avatar_url || null,
+            theme: settingsForm.theme,
+            link_style: settingsForm.link_style,
+            layout: settingsForm.layout,
+            show_blurred_bg: settingsForm.show_blurred_bg,
+            show_bio: settingsForm.show_bio,
+            bg_mode: settingsForm.bg_mode,
+            bg_value: settingsForm.bg_value || null,
+            bg_prompt: settingsForm.bg_prompt || null,
+          }}
+          links={links}
+        />
+      </div>
+    </div>
+  )
+}
+
 function SortableLinkItem({ link, editingId, editForm, setEditForm, saveEdit, setEditingId, startEdit, toggleLink, deleteLink, confirmDeleteId }: {
   link: LinkItem
   editingId: number | null
@@ -435,52 +513,7 @@ export default function DashboardClient({ user: initialUser }: { user: User }) {
         </div>
 
         {/* CENTER — Live Preview (inline, no iframe) */}
-        <div style={{
-          flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start',
-          padding: 24, background: '#0A0612', overflow: 'auto',
-        }}>
-          <div style={{ fontSize: 11, color: '#6B7280', marginBottom: 12, textAlign: 'center' as const }}>
-            Live Preview — glimr.io/{user.username}
-          </div>
-          <div style={{
-            width: '100%', maxWidth: 460, borderRadius: 20,
-            border: '1px solid rgba(255,255,255,0.08)',
-            boxShadow: '0 0 60px rgba(99, 102, 241, 0.08)',
-            overflow: 'hidden',
-            position: 'relative',
-            /* The outer wrapper shows the page background */
-            padding: 12,
-            background: (() => {
-              if (settingsForm.bg_mode === 'color' && settingsForm.bg_value) return settingsForm.bg_value
-              if (settingsForm.bg_mode === 'blur' && settingsForm.avatar_url) return '#111'
-              return settingsForm.theme === 'soft' ? '#FFF5FA' : '#000'
-            })(),
-          }}>
-            <div style={{
-              borderRadius: 12, overflow: 'hidden', position: 'relative',
-              /* clip fixed-position blurred bg inside this container */
-              clipPath: 'inset(0 round 12px)',
-            }}>
-              <ProfilePage
-                user={{
-                  ...user,
-                  display_name: settingsForm.display_name || null,
-                  bio: settingsForm.bio || null,
-                  avatar_url: settingsForm.avatar_url || null,
-                  theme: settingsForm.theme,
-                  link_style: settingsForm.link_style,
-                  layout: settingsForm.layout,
-                  show_blurred_bg: settingsForm.show_blurred_bg,
-                  show_bio: settingsForm.show_bio,
-                  bg_mode: settingsForm.bg_mode,
-                  bg_value: settingsForm.bg_value || null,
-                  bg_prompt: settingsForm.bg_prompt || null,
-                }}
-                links={links}
-              />
-            </div>
-          </div>
-        </div>
+        <PreviewArea settingsForm={settingsForm} user={user} links={links} />
 
         {/* RIGHT SIDEBAR — Settings */}
         <div style={{
