@@ -531,8 +531,8 @@ export default function ProfilePage({ user, links }: Props) {
             : '0 0 50px rgba(0,0,0,0.4)',
           minHeight: '95vh',
         }}>
-          {/* Hero image */}
-          <div ref={heroRef} style={{ position: 'relative', overflow: 'hidden' }}>
+          {/* Hero image — sticky so content scrolls over it */}
+          <div ref={heroRef} style={{ position: 'sticky', top: 0, zIndex: 1, overflow: 'hidden' }}>
             {avatarUrl ? (
               <img src={avatarUrl} alt={displayName} style={{
                 width: '100%', aspectRatio: '3 / 4', maxHeight: 580, minHeight: 360,
@@ -625,8 +625,13 @@ export default function ProfilePage({ user, links }: Props) {
             </div>
           </div>
 
-          {/* ════ LINKS ════ */}
-          <div style={{ padding: '4px 14px 32px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {/* ════ LINKS — scrolls over the hero ════ */}
+          <div style={{
+            position: 'relative', zIndex: 2,
+            backgroundColor: isSoft ? '#FFF5FA' : '#0a0a0a',
+            padding: '4px 14px 32px',
+            display: 'flex', flexDirection: 'column', gap: 8,
+          }}>
             <LinksSection
               links={enabledLinks}
               variant={variant}
@@ -636,7 +641,7 @@ export default function ProfilePage({ user, links }: Props) {
           </div>
 
           {/* ════ FOOTER ════ */}
-          <div style={{ padding: '20px 14px 24px', textAlign: 'center' }}>
+          <div style={{ position: 'relative', zIndex: 2, backgroundColor: isSoft ? '#FFF5FA' : '#0a0a0a', padding: '20px 14px 24px', textAlign: 'center' }}>
             <a
               href="https://glimr.io"
               style={{
