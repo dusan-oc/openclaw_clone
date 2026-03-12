@@ -570,10 +570,10 @@ export default function ProfilePage({ user, links }: Props) {
             {/* Bottom shadow — darkens lower portion of hero BEFORE scrolling */}
             <div style={{
               position: 'absolute', bottom: 0, left: 0, right: 0,
-              height: '55%',
+              height: '60%',
               backgroundImage: isSoft
-                ? 'linear-gradient(to bottom, transparent 0%, rgba(255,245,250,0.02) 25%, rgba(255,245,250,0.12) 50%, rgba(255,245,250,0.35) 70%, rgba(255,245,250,0.6) 85%, rgba(255,245,250,0.8) 100%)'
-                : 'linear-gradient(to bottom, transparent 0%, rgba(10,10,10,0.02) 25%, rgba(10,10,10,0.12) 50%, rgba(10,10,10,0.35) 70%, rgba(10,10,10,0.6) 85%, rgba(10,10,10,0.8) 100%)',
+                ? 'linear-gradient(to bottom, transparent 0%, rgba(255,245,250,0.05) 30%, rgba(255,245,250,0.2) 50%, rgba(255,245,250,0.5) 70%, rgba(255,245,250,0.85) 88%, #FFF5FA 100%)'
+                : 'linear-gradient(to bottom, transparent 0%, rgba(10,10,10,0.05) 30%, rgba(10,10,10,0.2) 50%, rgba(10,10,10,0.5) 70%, rgba(10,10,10,0.85) 88%, #0a0a0a 100%)',
               pointerEvents: 'none',
             }} />
             {/* Dark overlay that increases on scroll — LinkMe formula */}
@@ -594,9 +594,7 @@ export default function ProfilePage({ user, links }: Props) {
             {/* Name + badge + handle + icons + bio — TRANSPARENT, hero shows through */}
             <div ref={nameRef} style={{
               textAlign: 'center', padding: '28px 20px 16px',
-              backgroundImage: isSoft
-                ? 'linear-gradient(to bottom, rgba(255,245,250,0.8) 0%, rgba(255,245,250,0.92) 30%, #FFF5FA 60%)'
-                : 'linear-gradient(to bottom, rgba(10,10,10,0.8) 0%, rgba(10,10,10,0.92) 30%, #0a0a0a 60%)',
+              backgroundColor: isSoft ? '#FFF5FA' : '#0a0a0a',
             }}>
               <div style={{
                 fontSize: 32, fontWeight: 900,
