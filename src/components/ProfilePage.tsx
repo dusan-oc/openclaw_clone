@@ -535,84 +535,97 @@ export default function ProfilePage({ user, links }: Props) {
         minHeight: '100vh',
         display: 'flex', flexDirection: 'column',
       }}>
-        {/* ════ THE CARD ════ */}
-        <div style={{
-          position: 'relative',
+        {/* ════ HERO CONTAINER — sticky, stays in place while content scrolls over ════ */}
+        <div ref={heroRef} style={{
+          position: 'sticky', top: 0, zIndex: 1,
           margin: '8px 4px 0 4px',
-          backgroundColor: isSoft ? '#FFF5FA' : '#0a0a0a',
-          boxShadow: isSoft
-            ? '0 4px 30px rgba(0,0,0,0.08)'
-            : '0 0 50px rgba(0,0,0,0.4)',
-          minHeight: '95vh',
+          borderTopLeftRadius: 28, borderTopRightRadius: 28,
+          overflow: 'hidden',
         }}>
-          {/* Hero IMAGE only — sticky, darkens as content scrolls over */}
-          <div ref={heroRef} style={{
-            position: 'sticky', top: 0, zIndex: 1,
-            overflow: 'hidden', borderTopLeftRadius: 28, borderTopRightRadius: 28,
-          }}>
-            {avatarUrl ? (
-              <img src={avatarUrl} alt={displayName} style={{
-                width: '100%', aspectRatio: '3 / 4', maxHeight: 580, minHeight: 360,
-                objectFit: 'cover', objectPosition: 'center top', display: 'block',
-              }} />
-            ) : (
-              <div style={{
-                width: '100%', aspectRatio: '3 / 4', maxHeight: 580, minHeight: 360,
-                backgroundImage: isSoft
-                  ? 'linear-gradient(135deg, #f9a8d4, #c084fc, #93c5fd)'
-                  : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 120, fontWeight: 900, color: 'rgba(255,255,255,0.3)',
-              }}>
-                {displayName[0]?.toUpperCase()}
-              </div>
-            )}
-            {/* Bottom shadow removed — the scrollable content gradient handles the fade */}
-            {/* Dark overlay that increases on scroll — LinkMe formula */}
-            <div style={{
-              position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-              backgroundColor: isSoft ? '#FFF5FA' : '#000',
-              opacity: heroOverlay,
-              pointerEvents: 'none',
+          {/* Hero image */}
+          {avatarUrl ? (
+            <img src={avatarUrl} alt={displayName} style={{
+              width: '100%', aspectRatio: '3 / 4', maxHeight: 580, minHeight: 360,
+              objectFit: 'cover', objectPosition: 'center top', display: 'block',
             }} />
-          </div>
-
-          {/* ════ SCROLLABLE CONTENT — name, bio, icons, links ════
-              This entire section scrolls up over the hero image.
-              Large negative margin so it significantly overlaps the hero.
-              A tall gradient pseudo-covers the hero bottom, name text sits on top. */}
-          <div style={{
-            position: 'relative', zIndex: 2,
-            marginTop: '-45%',
-          }}>
-            {/* Gradient overlay — fades from transparent to card bg over the hero */}
+          ) : (
             <div style={{
-              position: 'absolute', top: 0, left: 0, right: 0,
-              height: '250px',
+              width: '100%', aspectRatio: '3 / 4', maxHeight: 580, minHeight: 360,
               backgroundImage: isSoft
-                ? 'linear-gradient(to bottom, transparent 0%, rgba(255,245,250,0.1) 15%, rgba(255,245,250,0.35) 35%, rgba(255,245,250,0.65) 55%, rgba(255,245,250,0.88) 75%, #FFF5FA 100%)'
-                : 'linear-gradient(to bottom, transparent 0%, rgba(10,10,10,0.1) 15%, rgba(10,10,10,0.35) 35%, rgba(10,10,10,0.65) 55%, rgba(10,10,10,0.88) 75%, #0a0a0a 100%)',
+                ? 'linear-gradient(135deg, #f9a8d4, #c084fc, #93c5fd)'
+                : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 120, fontWeight: 900, color: 'rgba(255,255,255,0.3)',
+            }}>
+              {displayName[0]?.toUpperCase()}
+            </div>
+          )}
+
+          {/* Bottom shadow on hero — darkens lower portion */}
+          <div style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0,
+            height: '40%',
+            backgroundImage: isSoft
+              ? 'linear-gradient(180deg, transparent 0%, rgba(255,245,250,0.15) 40%, rgba(255,245,250,0.4) 70%, rgba(255,245,250,0.65) 100%)'
+              : 'linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.15) 40%, rgba(0,0,0,0.4) 70%, rgba(0,0,0,0.65) 100%)',
+            pointerEvents: 'none',
+          }} />
+
+          {/* Scroll-controlled dark overlay */}
+          <div style={{
+            position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: isSoft ? '#FFF5FA' : '#000',
+            opacity: heroOverlay,
+            pointerEvents: 'none',
+            zIndex: 9,
+          }} />
+        </div>
+
+        {/* ════ SCROLLVIEW — pulls up over the hero ════
+            LinkMe uses: top: -44vw; margin-bottom: -44vw */}
+        <div style={{
+          position: 'relative', zIndex: 2,
+          top: '-44vw',
+          marginBottom: '-44vw',
+          display: 'flex', flexDirection: 'column', flex: 1,
+          marginLeft: 4, marginRight: 4,
+        }}>
+          {/* ── Name section (userDetais) — NO background, hero shows through ── */}
+          <div ref={nameRef} style={{
+            position: 'relative',
+            textAlign: 'center',
+            paddingTop: 16, paddingBottom: 20,
+            paddingLeft: 20, paddingRight: 20,
+          }}>
+            {/* Gradient positioned at BOTTOM of name section, extends upward.
+                LinkMe values: transparent 12% → transparent 46% → 0.38 at 76% → solid 100% */}
+            <div style={{
+              position: 'absolute', left: 0, right: 0, bottom: -1,
+              height: 'clamp(180px, 53vw, 400px)',
+              backgroundImage: isSoft
+                ? 'linear-gradient(180deg, rgba(255,245,250,0) 12%, rgba(255,245,250,0) 46%, rgba(255,245,250,0.38) 76%, #FFF5FA 100%)'
+                : 'linear-gradient(180deg, rgba(0,0,0,0) 12%, rgba(0,0,0,0) 46%, rgba(0,0,0,0.38) 76%, #0a0a0a 100%)',
               pointerEvents: 'none',
               zIndex: 1,
             }} />
-            {/* Name + badge + handle + icons + bio — sits on top of the gradient */}
-            <div ref={nameRef} style={{
-              position: 'relative', zIndex: 2,
-              textAlign: 'center', padding: '120px 20px 16px',
-            }}>
+
+            {/* Name, username, icons, bio — z-index 2 above gradient */}
+            <div style={{ position: 'relative', zIndex: 2 }}>
               <div style={{
                 fontSize: 32, fontWeight: 900,
                 color: isSoft ? '#1a1a2e' : '#fff',
                 letterSpacing: -0.8,
                 display: 'inline-flex', alignItems: 'center', gap: 8,
+                textShadow: '0 2px 12px rgba(0,0,0,0.3)',
               }}>
                 {displayName}
                 <VerifiedBadge />
               </div>
               <div style={{
                 fontSize: 15,
-                color: isSoft ? 'rgba(26,26,46,0.5)' : 'rgba(255,255,255,0.45)',
+                color: isSoft ? 'rgba(26,26,46,0.5)' : 'rgba(255,255,255,0.55)',
                 marginTop: 4, fontWeight: 400,
+                textShadow: '0 1px 8px rgba(0,0,0,0.2)',
               }}>
                 @{user.username}
               </div>
@@ -628,6 +641,7 @@ export default function ProfilePage({ user, links }: Props) {
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           backgroundColor: isSoft ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.1)',
                           border: isSoft ? '1px solid rgba(0,0,0,0.06)' : '1px solid rgba(255,255,255,0.08)',
+                          backdropFilter: 'blur(8px)',
                           transition: 'transform 0.2s, background-color 0.2s',
                           cursor: 'pointer', textDecoration: 'none',
                         }}
@@ -655,24 +669,30 @@ export default function ProfilePage({ user, links }: Props) {
                 </p>
               )}
             </div>
-
-            {/* Links */}
-            <div style={{
-              backgroundColor: isSoft ? '#FFF5FA' : '#0a0a0a',
-              padding: '8px 14px 32px',
-              display: 'flex', flexDirection: 'column', gap: 8,
-            }}>
-              <LinksSection
-                links={enabledLinks}
-                variant={variant}
-                linkStyle={user.link_style}
-                onWarning={setWarningUrl}
-              />
-            </div>
           </div>
 
-          {/* ════ FOOTER ════ */}
-          <div style={{ position: 'relative', zIndex: 2, backgroundColor: isSoft ? '#FFF5FA' : '#0a0a0a', borderBottomLeftRadius: 28, borderBottomRightRadius: 28, padding: '20px 14px 24px', textAlign: 'center' }}>
+          {/* ── Links section (scrollgroup) — solid background ── */}
+          <div style={{
+            position: 'relative', zIndex: 2,
+            backgroundColor: isSoft ? '#FFF5FA' : '#0a0a0a',
+            padding: '8px 14px 32px',
+            display: 'flex', flexDirection: 'column', gap: 8,
+          }}>
+            <LinksSection
+              links={enabledLinks}
+              variant={variant}
+              linkStyle={user.link_style}
+              onWarning={setWarningUrl}
+            />
+          </div>
+
+          {/* ── Footer ── */}
+          <div style={{
+            position: 'relative', zIndex: 2,
+            backgroundColor: isSoft ? '#FFF5FA' : '#0a0a0a',
+            borderBottomLeftRadius: 28, borderBottomRightRadius: 28,
+            padding: '20px 14px 24px', textAlign: 'center',
+          }}>
             <a
               href="https://glimr.io"
               style={{
