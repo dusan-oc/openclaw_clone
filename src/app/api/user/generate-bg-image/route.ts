@@ -22,7 +22,14 @@ IMPORTANT RULES for the image:
 - Keep it abstract/atmospheric unless the user specifically asks for concrete objects
 - If the user asks for specific objects/characters, place them on the LEFT and RIGHT sides
 - The image should work as a background — not too busy, not competing with foreground content
-- Dark/moody tones work best since the card overlay is dark (#0a0a0a)`
+- Dark/moody tones work best since the card overlay is dark (#0a0a0a)
+
+STYLE:
+- Modern digital art style — clean, sharp, polished
+- NOT oil painting, NOT watercolor, NOT classical art, NOT renaissance
+- Think: concept art, digital illustration, 3D renders, neon-lit scenes, cinematic CGI
+- High contrast, vibrant where appropriate, with clean edges
+- Premium and contemporary — like something you'd see on Dribbble or Behance`
 
 export async function POST(req: NextRequest) {
   const session = await auth()
