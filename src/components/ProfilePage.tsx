@@ -373,26 +373,33 @@ export default function ProfilePage({ user, links }: Props) {
   const headerLinks = enabledLinks.filter(l => l.show_in_header === 1)
   const bgMode = user.bg_mode || 'blur'
 
-  // Parse AI background CSS if applicable
+  // Parse AI background if applicable
   let aiBgCss = ''
   let aiBgKeyframes = ''
+  let aiBgImageUrl = ''
   if (bgMode === 'ai' && user.bg_value) {
     try {
       const parsed = JSON.parse(user.bg_value)
-      if (parsed['@keyframes']) {
-        aiBgKeyframes = `@keyframes ${parsed['@keyframes']}`
-        delete parsed['@keyframes']
+      if (parsed.type === 'image' && parsed.url) {
+        // Image mode
+        aiBgImageUrl = parsed.url
+      } else {
+        // CSS/pattern mode
+        if (parsed['@keyframes']) {
+          aiBgKeyframes = `@keyframes ${parsed['@keyframes']}`
+          delete parsed['@keyframes']
+        }
+        aiBgCss = Object.entries(parsed)
+          .map(([k, v]) => `${k.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${v}`)
+          .join('; ')
       }
-      // Convert camelCase to kebab-case for CSS
-      aiBgCss = Object.entries(parsed)
-        .map(([k, v]) => `${k.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${v}`)
-        .join('; ')
     } catch { /* fallback to default */ }
   }
 
   // Page background
   const pageBg = bgMode === 'color' && user.bg_value
     ? user.bg_value
+    : aiBgImageUrl ? '#000'
     : isSoft ? '#FFF5FA' : '#000'
 
   const showBlurBg = bgMode === 'blur' && user.show_blurred_bg === 1
@@ -409,6 +416,13 @@ export default function ProfilePage({ user, links }: Props) {
       display: 'flex', justifyContent: 'center',
       overflowX: 'hidden',
       ...(bgMode === 'ai' && aiBgCss ? {} : { background: pageBg }),
+      ...(aiBgImageUrl ? {
+        backgroundImage: `url(${aiBgImageUrl})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center top',
+        backgroundRepeat: 'no-repeat',
+        backgroundAttachment: 'fixed',
+      } : {}),
     }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');

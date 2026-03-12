@@ -114,18 +114,28 @@ function PreviewArea({ settingsForm, user, links }: {
   } else if (settingsForm.bg_mode === 'ai' && settingsForm.bg_value) {
     try {
       const parsed = JSON.parse(settingsForm.bg_value)
-      const copy = { ...parsed }
-      if (copy['@keyframes']) {
-        keyframesCss = `@keyframes ${copy['@keyframes']}`
-        delete copy['@keyframes']
-      }
-      // Apply all CSS properties from the AI generation
-      for (const [key, val] of Object.entries(copy)) {
-        const cssProp = key.replace(/([A-Z])/g, '-$1').toLowerCase()
-        ;(previewStyle as Record<string, unknown>)[key] = val
+      if (parsed.type === 'image' && parsed.url) {
+        // Image mode — show the generated image as background
+        previewStyle = {
+          backgroundImage: `url(${parsed.url})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center top',
+          backgroundRepeat: 'no-repeat',
+        }
+        previewBg = '#000'
+      } else {
+        // CSS/pattern mode
+        const copy = { ...parsed }
+        if (copy['@keyframes']) {
+          keyframesCss = `@keyframes ${copy['@keyframes']}`
+          delete copy['@keyframes']
+        }
+        for (const [key, val] of Object.entries(copy)) {
+          ;(previewStyle as Record<string, unknown>)[key] = val
+        }
+        previewBg = ''
       }
     } catch { /* fallback */ }
-    previewBg = ''
   } else if (settingsForm.bg_mode === 'blur') {
     previewBg = isSoft ? '#FFF5FA' : '#111'
   }
@@ -287,6 +297,13 @@ export default function DashboardClient({ user: initialUser }: { user: User }) {
   const [linkCopied, setLinkCopied] = useState(false)
   const [generatingBg, setGeneratingBg] = useState(false)
   const [bgPromptInput, setBgPromptInput] = useState(initialUser.bg_prompt ?? '')
+  const [aiSubMode, setAiSubMode] = useState<'patterns' | 'image'>(() => {
+    // Detect current sub-mode from existing bg_value
+    if (initialUser.bg_value) {
+      try { const p = JSON.parse(initialUser.bg_value); if (p.type === 'image') return 'image' } catch {}
+    }
+    return 'patterns'
+  })
 
   // Inline editing
   const [editingId, setEditingId] = useState<number | null>(null)
@@ -609,10 +626,29 @@ export default function DashboardClient({ user: initialUser }: { user: User }) {
             {/* AI mode */}
             {settingsForm.bg_mode === 'ai' && (
               <div>
+                {/* Sub-mode tabs */}
+                <div style={{ display: 'flex', gap: 4, marginBottom: 10 }}>
+                  {([['patterns', '✨ Patterns'], ['image', '🎨 Image']] as const).map(([mode, label]) => (
+                    <button key={mode} onClick={() => setAiSubMode(mode)}
+                      style={{
+                        flex: 1, padding: '6px 4px', borderRadius: 6,
+                        border: aiSubMode === mode ? `1.5px solid ${accent}` : '1.5px solid rgba(255,255,255,0.08)',
+                        background: aiSubMode === mode ? 'rgba(99,102,241,0.12)' : 'transparent',
+                        color: aiSubMode === mode ? '#fff' : '#6B7280',
+                        fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                      }}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
                 <textarea
                   value={bgPromptInput}
                   onChange={e => setBgPromptInput(e.target.value)}
-                  placeholder="Describe your background... e.g. 'dark aurora borealis with purple and teal'"
+                  placeholder={aiSubMode === 'image'
+                    ? "Describe your background image... e.g. 'angel on the left, devil on the right, dark moody atmosphere'"
+                    : "Describe your background... e.g. 'dark aurora borealis with purple and teal'"
+                  }
                   rows={3}
                   style={{
                     width: '100%', padding: '10px 12px', borderRadius: 8,
@@ -621,13 +657,19 @@ export default function DashboardClient({ user: initialUser }: { user: User }) {
                     outline: 'none', resize: 'vertical',
                   }}
                 />
+                {aiSubMode === 'image' && (
+                  <p style={{ fontSize: 10, color: '#6B7280', margin: '4px 0 0', lineHeight: 1.4 }}>
+                    Generates a 1024×1536 image via AI. Takes ~15-30s.
+                  </p>
+                )}
                 <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
                   <button
                     disabled={generatingBg || !bgPromptInput.trim()}
                     onClick={async () => {
                       setGeneratingBg(true)
                       try {
-                        const res = await fetch('/api/user/generate-bg', {
+                        const endpoint = aiSubMode === 'image' ? '/api/user/generate-bg-image' : '/api/user/generate-bg'
+                        const res = await fetch(endpoint, {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ prompt: bgPromptInput.trim() }),
@@ -652,12 +694,24 @@ export default function DashboardClient({ user: initialUser }: { user: User }) {
                       background: generatingBg ? 'rgba(99,102,241,0.3)' : accent,
                       color: '#fff', fontSize: 13, fontWeight: 600, fontFamily: 'inherit',
                     }}>
-                    {generatingBg ? '✨ Generating…' : '✨ Generate'}
+                    {generatingBg ? (aiSubMode === 'image' ? '🎨 Generating image…' : '✨ Generating…')
+                      : (aiSubMode === 'image' ? '🎨 Generate Image' : '✨ Generate Patterns')}
                   </button>
                   <button
                     disabled={generatingBg}
                     onClick={async () => {
-                      const RANDOM_PROMPTS = [
+                      const RANDOM_PROMPTS = aiSubMode === 'image' ? [
+                        'ethereal angel wings on the left, dark demon silhouette on the right, moody atmosphere',
+                        'cosmic galaxy with planets and nebula, deep space vibes',
+                        'dark enchanted forest with glowing mushrooms and mystical fog',
+                        'underwater scene with bioluminescent creatures in deep ocean',
+                        'gothic cathedral architecture fading into darkness',
+                        'neon cyberpunk cityscape at night with rain and reflections',
+                        'dark fantasy throne room with candles and mysterious shadows',
+                        'abstract smoke and fire swirling in darkness',
+                        'japanese cherry blossom garden at night with lanterns',
+                        'aurora borealis over snowy mountains, cinematic and dramatic',
+                      ] : [
                         'dark cosmic nebula with deep purple and blue swirls',
                         'neon pink and cyan retro synthwave grid with glow',
                         'midnight ocean waves with moonlight reflections',
@@ -683,7 +737,8 @@ export default function DashboardClient({ user: initialUser }: { user: User }) {
                       setBgPromptInput(prompt)
                       setGeneratingBg(true)
                       try {
-                        const res = await fetch('/api/user/generate-bg', {
+                        const endpoint = aiSubMode === 'image' ? '/api/user/generate-bg-image' : '/api/user/generate-bg'
+                        const res = await fetch(endpoint, {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ prompt }),
