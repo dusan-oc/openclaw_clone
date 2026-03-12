@@ -585,8 +585,8 @@ export default function ProfilePage({ user, links }: Props) {
             LinkMe uses: top: -44vw; margin-bottom: -44vw */}
         <div style={{
           position: 'relative', zIndex: 2,
-          top: '-44vw',
-          marginBottom: '-44vw',
+          top: '-280px',
+          marginBottom: '-280px',
           display: 'flex', flexDirection: 'column', flex: 1,
           marginLeft: 4, marginRight: 4,
         }}>
@@ -594,14 +594,14 @@ export default function ProfilePage({ user, links }: Props) {
           <div ref={nameRef} style={{
             position: 'relative',
             textAlign: 'center',
-            paddingTop: 16, paddingBottom: 20,
+            paddingTop: 100, paddingBottom: 20,
             paddingLeft: 20, paddingRight: 20,
           }}>
             {/* Gradient positioned at BOTTOM of name section, extends upward.
                 LinkMe values: transparent 12% → transparent 46% → 0.38 at 76% → solid 100% */}
             <div style={{
               position: 'absolute', left: 0, right: 0, bottom: -1,
-              height: 'clamp(180px, 53vw, 400px)',
+              height: '280px',
               backgroundImage: isSoft
                 ? 'linear-gradient(180deg, rgba(255,245,250,0) 12%, rgba(255,245,250,0) 46%, rgba(255,245,250,0.38) 76%, #FFF5FA 100%)'
                 : 'linear-gradient(180deg, rgba(0,0,0,0) 12%, rgba(0,0,0,0) 46%, rgba(0,0,0,0.38) 76%, #0a0a0a 100%)',
