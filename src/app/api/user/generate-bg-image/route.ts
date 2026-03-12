@@ -8,21 +8,16 @@ import { join } from 'path'
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY
 
-const SYSTEM_CONTEXT = `You are generating a background IMAGE for a link-in-bio profile page with this layout:
-- A dark rounded card (~560px wide) sits CENTERED on this background, covering most of the center
-- The visible background areas are mainly the LEFT and RIGHT sides, plus a strip at the TOP
-- On mobile, the card fills nearly the full width so background is barely visible
-- On desktop, there's significant space on both sides of the card
+const SYSTEM_CONTEXT = `You are generating a LANDSCAPE background IMAGE for a link-in-bio profile page.
 
-IMPORTANT RULES for the image:
-- Do NOT put important details in the CENTER — they will be hidden behind the dark card
-- Place interesting visual elements on the LEFT and RIGHT edges
-- Make the image atmospheric, ambient, and slightly darker toward the center
-- The overall mood should be premium, polished, and complement a dark UI
-- Keep it abstract/atmospheric unless the user specifically asks for concrete objects
-- If the user asks for specific objects/characters, place them on the LEFT and RIGHT sides
-- The image should work as a background — not too busy, not competing with foreground content
-- Dark/moody tones work best since the card overlay is dark (#0a0a0a)
+The image will be used as a full-screen wallpaper behind a dark UI card. Generate a complete, cohesive image that fills the entire frame — do NOT leave the center empty or dark. The entire image should be visually interesting and atmospheric.
+
+RULES:
+- Fill the ENTIRE image with content — no blank/empty areas
+- The image should work as a beautiful wallpaper at any crop
+- Dark/moody tones work best but the image should be rich and detailed throughout
+- Keep it atmospheric — this is a background, not a focal-point illustration
+- The overall mood should be premium, polished, and contemporary
 
 STYLE:
 - Modern digital art style — clean, sharp, polished

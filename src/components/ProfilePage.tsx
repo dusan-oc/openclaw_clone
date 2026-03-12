@@ -415,19 +415,20 @@ export default function ProfilePage({ user, links }: Props) {
       minHeight: '100vh',
       display: 'flex', justifyContent: 'center',
       overflowX: 'hidden',
-      ...(bgMode === 'ai' && aiBgCss ? {} : { background: pageBg }),
       ...(aiBgImageUrl ? {
         backgroundImage: `url(${aiBgImageUrl})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center top',
         backgroundRepeat: 'no-repeat',
         backgroundColor: '#000',
-      } : {}),
+      } : bgMode === 'ai' && aiBgCss ? {} : {
+        backgroundColor: pageBg,
+      }),
     }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: ${bgMode === 'color' && user.bg_value ? user.bg_value : isSoft ? '#FFF5FA' : '#000'}; }
+        body { background-color: ${bgMode === 'color' && user.bg_value ? user.bg_value : isSoft ? '#FFF5FA' : '#000'}; }
         ${variant === 'neon' ? `@keyframes neonPulse { 0%,100%{opacity:0.6}50%{opacity:1} }` : ''}
         ${aiBgKeyframes}
         ${aiBgCss ? `.glimr-ai-bg { ${aiBgCss} }` : ''}

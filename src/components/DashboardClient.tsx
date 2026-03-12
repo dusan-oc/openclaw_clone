@@ -144,7 +144,7 @@ function PreviewArea({ settingsForm, user, links }: {
     <div style={{
       flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start',
       padding: 24, overflow: 'auto', position: 'relative',
-      background: previewBg || undefined,
+      backgroundColor: previewBg || undefined,
       ...previewStyle,
     }}>
       {keyframesCss && <style>{keyframesCss}</style>}
