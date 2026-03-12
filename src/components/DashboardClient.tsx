@@ -3,8 +3,11 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { signOut } from 'next-auth/react'
 import Link from 'next/link'
-import { Copy, Check, Pencil, X as XIcon, Loader2, ChevronUp, ChevronDown } from 'lucide-react'
+import { Copy, Check, Pencil, X as XIcon, Loader2, GripVertical } from 'lucide-react'
 import ProfilePage from './ProfilePage'
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
+import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 
 type LinkItem = {
   id: number
@@ -86,6 +89,93 @@ function Toggle({ label, value, onChange }: { label: string; value: boolean; onC
           transition: 'left 0.15s',
         }} />
       </button>
+    </div>
+  )
+}
+
+function SortableLinkItem({ link, editingId, editForm, setEditForm, saveEdit, setEditingId, startEdit, toggleLink, deleteLink, confirmDeleteId }: {
+  link: LinkItem
+  editingId: number | null
+  editForm: { title: string; url: string; icon: string; thumbnail_url: string; card_size: 'full' | 'half'; show_in_header: number }
+  setEditForm: React.Dispatch<React.SetStateAction<typeof editForm>>
+  saveEdit: () => void
+  setEditingId: (id: number | null) => void
+  startEdit: (link: LinkItem) => void
+  toggleLink: (id: number, enabled: number) => void
+  deleteLink: (id: number) => void
+  confirmDeleteId: number | null
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: link.id })
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : link.enabled ? 1 : 0.5,
+    padding: '8px 10px', borderRadius: 8, background: isDragging ? 'rgba(99,102,241,0.1)' : 'rgba(255,255,255,0.03)',
+    border: isDragging ? `1px solid ${accent}` : '1px solid rgba(255,255,255,0.06)',
+  }
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      {editingId === link.id ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <input type="text" value={editForm.icon} onChange={e => setEditForm(p => ({ ...p, icon: e.target.value }))}
+              style={{ width: 36, padding: '4px', borderRadius: 4, border: `1px solid ${inputBorder}`, background: inputBg, color: '#fff', textAlign: 'center' as const, fontSize: 14, outline: 'none' }} />
+            <input type="text" value={editForm.title} onChange={e => setEditForm(p => ({ ...p, title: e.target.value }))}
+              style={{ flex: 1, padding: '4px 8px', borderRadius: 4, border: `1px solid ${inputBorder}`, background: inputBg, color: '#fff', fontSize: 12, outline: 'none' }} />
+          </div>
+          <input type="text" value={editForm.url} onChange={e => setEditForm(p => ({ ...p, url: e.target.value }))}
+            style={{ padding: '4px 8px', borderRadius: 4, border: `1px solid ${inputBorder}`, background: inputBg, color: '#fff', fontSize: 12, outline: 'none' }} />
+          <input type="text" value={editForm.thumbnail_url} onChange={e => setEditForm(p => ({ ...p, thumbnail_url: e.target.value }))}
+            placeholder="Thumbnail URL" style={{ padding: '4px 8px', borderRadius: 4, border: `1px solid ${inputBorder}`, background: inputBg, color: '#fff', fontSize: 11, outline: 'none' }} />
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <select value={editForm.card_size} onChange={e => setEditForm(p => ({ ...p, card_size: e.target.value as 'full' | 'half' }))}
+              style={{ flex: 1, padding: '4px 6px', borderRadius: 4, border: `1px solid ${inputBorder}`, background: inputBg, color: '#fff', fontSize: 11, outline: 'none' }}>
+              <option value="full">Full width</option>
+              <option value="half">Half width</option>
+            </select>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#9CA3AF', cursor: 'pointer', whiteSpace: 'nowrap' as const }}>
+              <input type="checkbox" checked={editForm.show_in_header === 1}
+                onChange={e => setEditForm(p => ({ ...p, show_in_header: e.target.checked ? 1 : 0 }))}
+                style={{ accentColor: accent }} />
+              Header icon
+            </label>
+          </div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button onClick={saveEdit} style={{ flex: 1, padding: '5px 0', borderRadius: 4, border: 'none', background: accent, color: '#fff', fontSize: 12, cursor: 'pointer' }}>Save</button>
+            <button onClick={() => setEditingId(null)} style={{ flex: 1, padding: '5px 0', borderRadius: 4, border: `1px solid ${inputBorder}`, background: 'none', color: '#9CA3AF', fontSize: 12, cursor: 'pointer' }}>Cancel</button>
+          </div>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div {...attributes} {...listeners} style={{ cursor: 'grab', color: '#4B5563', display: 'flex', alignItems: 'center', touchAction: 'none' }}>
+            <GripVertical size={14} />
+          </div>
+          <span style={{ fontSize: 16 }}>{link.icon}</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ color: '#fff', fontSize: 13, fontWeight: 500, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{link.title}</p>
+            <p style={{ color: '#6B7280', fontSize: 11, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{link.url}</p>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+            <button onClick={() => startEdit(link)} style={{ background: 'none', border: 'none', color: '#6B7280', cursor: 'pointer', padding: 2 }}><Pencil size={13} /></button>
+            <button onClick={() => toggleLink(link.id, link.enabled)} style={{
+              width: 28, height: 16, borderRadius: 8, border: 'none', cursor: 'pointer',
+              background: link.enabled ? accent : 'rgba(255,255,255,0.15)', position: 'relative',
+            }}>
+              <span style={{
+                position: 'absolute', top: 2, left: link.enabled ? 14 : 2,
+                width: 12, height: 12, borderRadius: 6, background: '#fff', transition: 'left 0.15s',
+              }} />
+            </button>
+            <button onClick={() => deleteLink(link.id)} style={{
+              background: 'none', border: 'none', cursor: 'pointer', padding: 2,
+              color: confirmDeleteId === link.id ? '#EF4444' : '#6B7280',
+            }}>
+              {confirmDeleteId === link.id ? <span style={{ fontSize: 10, color: '#EF4444' }}>Del?</span> : <XIcon size={13} />}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -202,14 +292,26 @@ export default function DashboardClient({ user: initialUser }: { user: User }) {
     refreshPreview()
   }
 
-  const moveLink = async (index: number, direction: 'up' | 'down') => {
-    const swapIndex = direction === 'up' ? index - 1 : index + 1
-    if (swapIndex < 0 || swapIndex >= links.length) return
-    const a = links[index], b = links[swapIndex]
-    await Promise.all([
-      fetch(`/api/links?id=${a.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ position: b.position }) }),
-      fetch(`/api/links?id=${b.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ position: a.position }) }),
-    ])
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  )
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    const oldIndex = links.findIndex(l => l.id === active.id)
+    const newIndex = links.findIndex(l => l.id === over.id)
+    if (oldIndex === -1 || newIndex === -1) return
+    // Optimistic reorder
+    const reordered = arrayMove(links, oldIndex, newIndex)
+    setLinks(reordered)
+    // Persist new positions
+    await Promise.all(
+      reordered.map((link, i) =>
+        fetch(`/api/links?id=${link.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ position: i }) })
+      )
+    )
     await fetchLinks()
     refreshPreview()
   }
@@ -308,80 +410,27 @@ export default function DashboardClient({ user: initialUser }: { user: User }) {
           {links.length === 0 ? (
             <div style={{ color: '#6B7280', fontSize: 13, textAlign: 'center', padding: '32px 0' }}>No links yet</div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              {links.map((link, i) => (
-                <div key={link.id} style={{
-                  padding: '8px 10px', borderRadius: 8, background: 'rgba(255,255,255,0.03)',
-                  border: '1px solid rgba(255,255,255,0.06)', opacity: link.enabled ? 1 : 0.5,
-                }}>
-                  {editingId === link.id ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <input type="text" value={editForm.icon} onChange={e => setEditForm(p => ({ ...p, icon: e.target.value }))}
-                          style={{ width: 36, padding: '4px', borderRadius: 4, border: `1px solid ${inputBorder}`, background: inputBg, color: '#fff', textAlign: 'center' as const, fontSize: 14, outline: 'none' }} />
-                        <input type="text" value={editForm.title} onChange={e => setEditForm(p => ({ ...p, title: e.target.value }))}
-                          style={{ flex: 1, padding: '4px 8px', borderRadius: 4, border: `1px solid ${inputBorder}`, background: inputBg, color: '#fff', fontSize: 12, outline: 'none' }} />
-                      </div>
-                      <input type="text" value={editForm.url} onChange={e => setEditForm(p => ({ ...p, url: e.target.value }))}
-                        style={{ padding: '4px 8px', borderRadius: 4, border: `1px solid ${inputBorder}`, background: inputBg, color: '#fff', fontSize: 12, outline: 'none' }} />
-                      <input type="text" value={editForm.thumbnail_url} onChange={e => setEditForm(p => ({ ...p, thumbnail_url: e.target.value }))}
-                        placeholder="Thumbnail URL" style={{ padding: '4px 8px', borderRadius: 4, border: `1px solid ${inputBorder}`, background: inputBg, color: '#fff', fontSize: 11, outline: 'none' }} />
-                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                        <select value={editForm.card_size} onChange={e => setEditForm(p => ({ ...p, card_size: e.target.value as 'full' | 'half' }))}
-                          style={{ flex: 1, padding: '4px 6px', borderRadius: 4, border: `1px solid ${inputBorder}`, background: inputBg, color: '#fff', fontSize: 11, outline: 'none' }}>
-                          <option value="full">Full width</option>
-                          <option value="half">Half width</option>
-                        </select>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#9CA3AF', cursor: 'pointer', whiteSpace: 'nowrap' as const }}>
-                          <input type="checkbox" checked={editForm.show_in_header === 1}
-                            onChange={e => setEditForm(p => ({ ...p, show_in_header: e.target.checked ? 1 : 0 }))}
-                            style={{ accentColor: accent }} />
-                          Header icon
-                        </label>
-                      </div>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <button onClick={saveEdit} style={{ flex: 1, padding: '5px 0', borderRadius: 4, border: 'none', background: accent, color: '#fff', fontSize: 12, cursor: 'pointer' }}>Save</button>
-                        <button onClick={() => setEditingId(null)} style={{ flex: 1, padding: '5px 0', borderRadius: 4, border: `1px solid ${inputBorder}`, background: 'none', color: '#9CA3AF', fontSize: 12, cursor: 'pointer' }}>Cancel</button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                        <button onClick={() => moveLink(i, 'up')} disabled={i === 0} style={{ background: 'none', border: 'none', color: i === 0 ? '#333' : '#6B7280', cursor: 'pointer', padding: 0, fontSize: 10, lineHeight: 1 }}>
-                          <ChevronUp size={12} />
-                        </button>
-                        <button onClick={() => moveLink(i, 'down')} disabled={i === links.length - 1} style={{ background: 'none', border: 'none', color: i === links.length - 1 ? '#333' : '#6B7280', cursor: 'pointer', padding: 0, fontSize: 10, lineHeight: 1 }}>
-                          <ChevronDown size={12} />
-                        </button>
-                      </div>
-                      <span style={{ fontSize: 16 }}>{link.icon}</span>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ color: '#fff', fontSize: 13, fontWeight: 500, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{link.title}</p>
-                        <p style={{ color: '#6B7280', fontSize: 11, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{link.url}</p>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-                        <button onClick={() => startEdit(link)} style={{ background: 'none', border: 'none', color: '#6B7280', cursor: 'pointer', padding: 2 }}><Pencil size={13} /></button>
-                        <button onClick={() => toggleLink(link.id, link.enabled)} style={{
-                          width: 28, height: 16, borderRadius: 8, border: 'none', cursor: 'pointer',
-                          background: link.enabled ? accent : 'rgba(255,255,255,0.15)', position: 'relative',
-                        }}>
-                          <span style={{
-                            position: 'absolute', top: 2, left: link.enabled ? 14 : 2,
-                            width: 12, height: 12, borderRadius: 6, background: '#fff', transition: 'left 0.15s',
-                          }} />
-                        </button>
-                        <button onClick={() => deleteLink(link.id)} style={{
-                          background: 'none', border: 'none', cursor: 'pointer', padding: 2,
-                          color: confirmDeleteId === link.id ? '#EF4444' : '#6B7280',
-                        }}>
-                          {confirmDeleteId === link.id ? <span style={{ fontSize: 10, color: '#EF4444' }}>Del?</span> : <XIcon size={13} />}
-                        </button>
-                      </div>
-                    </div>
-                  )}
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={links.map(l => l.id)} strategy={verticalListSortingStrategy}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {links.map((link) => (
+                    <SortableLinkItem
+                      key={link.id}
+                      link={link}
+                      editingId={editingId}
+                      editForm={editForm}
+                      setEditForm={setEditForm}
+                      saveEdit={saveEdit}
+                      setEditingId={setEditingId}
+                      startEdit={startEdit}
+                      toggleLink={toggleLink}
+                      deleteLink={deleteLink}
+                      confirmDeleteId={confirmDeleteId}
+                    />
+                  ))}
                 </div>
-              ))}
-            </div>
+              </SortableContext>
+            </DndContext>
           )}
         </div>
 
@@ -394,18 +443,24 @@ export default function DashboardClient({ user: initialUser }: { user: User }) {
             Live Preview — glimr.io/{user.username}
           </div>
           <div style={{
-            width: '100%', maxWidth: 430, borderRadius: 16,
+            width: '100%', maxWidth: 460, borderRadius: 20,
             border: '1px solid rgba(255,255,255,0.08)',
             boxShadow: '0 0 60px rgba(99, 102, 241, 0.08)',
             overflow: 'hidden',
-            background: settingsForm.bg_mode === 'color' && settingsForm.bg_value
-              ? settingsForm.bg_value
-              : settingsForm.theme === 'soft' ? '#FFF5FA' : '#000',
             position: 'relative',
-            /* clip fixed-position blurred bg inside this container */
-            clipPath: 'inset(0 round 16px)',
+            /* The outer wrapper shows the page background */
+            padding: 12,
+            background: (() => {
+              if (settingsForm.bg_mode === 'color' && settingsForm.bg_value) return settingsForm.bg_value
+              if (settingsForm.bg_mode === 'blur' && settingsForm.avatar_url) return '#111'
+              return settingsForm.theme === 'soft' ? '#FFF5FA' : '#000'
+            })(),
           }}>
-            <div style={{ position: 'relative' }}>
+            <div style={{
+              borderRadius: 12, overflow: 'hidden', position: 'relative',
+              /* clip fixed-position blurred bg inside this container */
+              clipPath: 'inset(0 round 12px)',
+            }}>
               <ProfilePage
                 user={{
                   ...user,
