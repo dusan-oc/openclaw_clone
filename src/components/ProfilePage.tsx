@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { getPlatformIcon } from '@/lib/platform-icons'
 
 function isOnlyFansUrl(url: string) {
@@ -177,7 +177,7 @@ function linkProps(link: Link, onWarning?: OnWarning) {
 }
 
 function ImageCard({ link, isGrid, variant, onWarning }: { link: Link; isGrid: boolean; variant: Variant; onWarning?: OnWarning }) {
-  const height = isGrid ? 160 : 260
+  const height = isGrid ? 200 : 320
   const borderColor = variant === 'neon' ? 'rgba(168,85,247,0.2)' : 'transparent'
 
   return (
@@ -241,7 +241,7 @@ function DefaultImageCard({ link, isGrid, variant, onWarning }: { link: Link; is
     >
       <div style={{ position: 'relative' }}>
         <img src={link.thumbnail_url!} alt={link.title}
-          style={{ width: '100%', height: isGrid ? 120 : 200, objectFit: 'cover', display: 'block' }} />
+          style={{ width: '100%', height: isGrid ? 160 : 260, objectFit: 'cover', display: 'block' }} />
         <PlatformBadge link={link} />
       </div>
       <div style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -281,7 +281,7 @@ function GlassCard({ link, isGrid, variant, onWarning }: { link: Link; isGrid: b
         display: 'flex', alignItems: 'center', gap: 14,
         width: '100%', borderRadius: 16, overflow: 'hidden',
         textDecoration: 'none', cursor: 'pointer',
-        padding: isGrid ? '14px 12px' : '18px 16px',
+        padding: isGrid ? '16px 14px' : '20px 18px',
         background: bg, border,
         backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
         transition: 'transform 0.2s ease',
@@ -342,11 +342,11 @@ function LinksSection({ links, variant, linkStyle, onWarning }: {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       {rows.map((row, idx) => {
         if (Array.isArray(row)) {
           return (
-            <div key={`row-${idx}`} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+            <div key={`row-${idx}`} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               <LinkCard link={row[0]} isGrid={true} variant={variant} linkStyle={linkStyle} onWarning={onWarning} />
               <LinkCard link={row[1]} isGrid={true} variant={variant} linkStyle={linkStyle} onWarning={onWarning} />
             </div>
@@ -364,6 +364,8 @@ function LinksSection({ links, variant, linkStyle, onWarning }: {
 
 export default function ProfilePage({ user, links }: Props) {
   const [warningUrl, setWarningUrl] = useState<string | null>(null)
+  const [showStickyHeader, setShowStickyHeader] = useState(false)
+  const heroRef = useRef<HTMLDivElement>(null)
   const enabledLinks = links.filter(l => l.enabled === 1)
   const variant: Variant = user.theme === 'neon' ? 'neon' : user.theme === 'soft' ? 'soft' : 'dark'
   const displayName = user.display_name ?? user.username
@@ -373,6 +375,17 @@ export default function ProfilePage({ user, links }: Props) {
   const headerLinks = enabledLinks.filter(l => l.show_in_header === 1)
   const bgMode = user.bg_mode || 'blur'
 
+  // Intersection observer for sticky header
+  useEffect(() => {
+    if (!heroRef.current) return
+    const observer = new IntersectionObserver(
+      ([entry]) => setShowStickyHeader(!entry.isIntersecting),
+      { threshold: 0, rootMargin: '-48px 0px 0px 0px' }
+    )
+    observer.observe(heroRef.current)
+    return () => observer.disconnect()
+  }, [])
+
   // Parse AI background if applicable
   let aiBgCss = ''
   let aiBgKeyframes = ''
@@ -381,10 +394,8 @@ export default function ProfilePage({ user, links }: Props) {
     try {
       const parsed = JSON.parse(user.bg_value)
       if (parsed.type === 'image' && parsed.url) {
-        // Image mode
         aiBgImageUrl = parsed.url
       } else {
-        // CSS/pattern mode
         if (parsed['@keyframes']) {
           aiBgKeyframes = `@keyframes ${parsed['@keyframes']}`
           delete parsed['@keyframes']
@@ -393,10 +404,9 @@ export default function ProfilePage({ user, links }: Props) {
           .map(([k, v]) => `${k.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${v}`)
           .join('; ')
       }
-    } catch { /* fallback to default */ }
+    } catch { /* fallback */ }
   }
 
-  // Page background
   const pageBg = bgMode === 'color' && user.bg_value
     ? user.bg_value
     : aiBgImageUrl ? '#000'
@@ -404,17 +414,13 @@ export default function ProfilePage({ user, links }: Props) {
 
   const showBlurBg = bgMode === 'blur' && user.show_blurred_bg === 1
 
-  // Bio color
-  const bioColor = isSoft ? '#6b7280' : variant === 'neon' ? '#c4b5fd' : 'rgba(255,255,255,0.55)'
-
   return (
     <>
     {warningUrl && <ContentWarningModal url={warningUrl} onClose={() => setWarningUrl(null)} />}
+
+    {/* ── FIXED BACKGROUND LAYER ── */}
     <div className={bgMode === 'ai' && aiBgCss ? 'glimr-ai-bg' : undefined} style={{
-      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-      minHeight: '100vh',
-      display: 'flex', justifyContent: 'center',
-      overflowX: 'hidden',
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0,
       ...(aiBgImageUrl ? {
         backgroundImage: `url(${aiBgImageUrl})`,
         backgroundSize: 'cover',
@@ -424,67 +430,109 @@ export default function ProfilePage({ user, links }: Props) {
       } : bgMode === 'ai' && aiBgCss ? {} : {
         backgroundColor: pageBg,
       }),
-    }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background-color: ${bgMode === 'color' && user.bg_value ? user.bg_value : isSoft ? '#FFF5FA' : '#000'}; }
-        ${variant === 'neon' ? `@keyframes neonPulse { 0%,100%{opacity:0.6}50%{opacity:1} }` : ''}
-        ${aiBgKeyframes}
-        ${aiBgCss ? `.glimr-ai-bg { ${aiBgCss} }` : ''}
-      `}</style>
+    }} />
 
-      {/* ── Blurred Background ── */}
-      {showBlurBg && avatarUrl && (
-        <>
+    <style>{`
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { background-color: ${pageBg}; overflow-x: hidden; }
+      ${variant === 'neon' ? `@keyframes neonPulse { 0%,100%{opacity:0.6}50%{opacity:1} }` : ''}
+      ${aiBgKeyframes}
+      ${aiBgCss ? `.glimr-ai-bg { ${aiBgCss} }` : ''}
+      @keyframes slideDown { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    `}</style>
+
+    {/* ── Blurred Background (fixed) ── */}
+    {showBlurBg && avatarUrl && (
+      <>
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundImage: `url(${avatarUrl})`,
+          backgroundSize: 'cover', backgroundPosition: 'center top',
+          filter: isSoft
+            ? 'blur(60px) brightness(1.3) saturate(0.4)'
+            : `blur(40px) brightness(${variant === 'neon' ? 0.45 : 0.55}) saturate(1.6)`,
+          transform: 'scale(1.3)',
+          zIndex: 0,
+        }} />
+        {!isSoft && (
           <div style={{
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundImage: `url(${avatarUrl})`,
-            backgroundSize: 'cover', backgroundPosition: 'center top',
-            filter: isSoft
-              ? 'blur(60px) brightness(1.3) saturate(0.4)'
-              : `blur(40px) brightness(${variant === 'neon' ? 0.45 : 0.55}) saturate(1.6)`,
-            transform: 'scale(1.3)',
+            backgroundImage: 'linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.25) 50%, rgba(0,0,0,0.6) 100%)',
             zIndex: 0,
           }} />
-          {!isSoft && (
-            <div style={{
-              position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-              background: 'linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.25) 50%, rgba(0,0,0,0.6) 100%)',
-              zIndex: 1,
-            }} />
-          )}
-        </>
-      )}
+        )}
+      </>
+    )}
 
-      {/* ── Page Container ── */}
+    {/* ── STICKY HEADER — appears when hero scrolls out ── */}
+    {showStickyHeader && (
       <div style={{
-        position: 'relative', zIndex: 2,
+        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
+        backgroundColor: isSoft ? 'rgba(255,245,250,0.92)' : 'rgba(10,10,10,0.92)',
+        backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+        borderBottom: isSoft ? '1px solid rgba(0,0,0,0.06)' : '1px solid rgba(255,255,255,0.08)',
+        animation: 'slideDown 0.25s ease',
+      }}>
+        <div style={{
+          maxWidth: 560, margin: '0 auto',
+          padding: '10px 16px',
+          display: 'flex', alignItems: 'center', gap: 10,
+        }}>
+          {avatarUrl ? (
+            <img src={avatarUrl} alt={displayName} style={{
+              width: 32, height: 32, borderRadius: '50%', objectFit: 'cover',
+            }} />
+          ) : (
+            <div style={{
+              width: 32, height: 32, borderRadius: '50%',
+              backgroundColor: isSoft ? '#e9d5ff' : '#333',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 14, fontWeight: 700, color: isSoft ? '#7c3aed' : '#fff',
+            }}>
+              {displayName[0]?.toUpperCase()}
+            </div>
+          )}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{
+              fontSize: 14, fontWeight: 700,
+              color: isSoft ? '#1a1a2e' : '#fff',
+              display: 'flex', alignItems: 'center', gap: 4,
+            }}>
+              {displayName}
+              <VerifiedBadge />
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* ── SCROLLABLE CONTENT ── */}
+    <div style={{
+      position: 'relative', zIndex: 2,
+      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+      minHeight: '100vh',
+      display: 'flex', justifyContent: 'center',
+    }}>
+      <div style={{
         width: '100%', maxWidth: 560,
         minHeight: '100vh',
         display: 'flex', flexDirection: 'column',
       }}>
-
-        {/* ════ THE CARD ════
-            One big card that contains EVERYTHING — hero image + name + links.
-            Rounded top corners, extends to the bottom of the page.
-            Like LinkMe: the hero is wider, links are narrower inside it. */}
+        {/* ════ THE CARD ════ */}
         <div style={{
           position: 'relative',
           margin: '8px 4px 0 4px',
-          borderTopLeftRadius: 28,
-          borderTopRightRadius: 28,
-          borderBottomLeftRadius: 28,
-          borderBottomRightRadius: 28,
+          borderRadius: 28,
           overflow: 'hidden',
-          background: isSoft ? '#FFF5FA' : '#0a0a0a',
+          backgroundColor: isSoft ? '#FFF5FA' : '#0a0a0a',
           boxShadow: isSoft
             ? '0 4px 30px rgba(0,0,0,0.08)'
             : '0 0 50px rgba(0,0,0,0.4)',
           minHeight: '95vh',
         }}>
           {/* Hero image */}
-          <div style={{ position: 'relative', overflow: 'hidden' }}>
+          <div ref={heroRef} style={{ position: 'relative', overflow: 'hidden' }}>
             {avatarUrl ? (
               <img src={avatarUrl} alt={displayName} style={{
                 width: '100%', aspectRatio: '3 / 4', maxHeight: 580, minHeight: 360,
@@ -493,7 +541,7 @@ export default function ProfilePage({ user, links }: Props) {
             ) : (
               <div style={{
                 width: '100%', aspectRatio: '3 / 4', maxHeight: 580, minHeight: 360,
-                background: isSoft
+                backgroundImage: isSoft
                   ? 'linear-gradient(135deg, #f9a8d4, #c084fc, #93c5fd)'
                   : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -503,10 +551,10 @@ export default function ProfilePage({ user, links }: Props) {
               </div>
             )}
 
-            {/* Dramatic bottom gradient — fades into the card background */}
+            {/* Dramatic bottom gradient */}
             <div style={{
               position: 'absolute', bottom: 0, left: 0, right: 0, height: '65%',
-              background: isSoft
+              backgroundImage: isSoft
                 ? 'linear-gradient(to bottom, transparent 0%, rgba(255,245,250,0.05) 25%, rgba(255,245,250,0.5) 60%, #FFF5FA 100%)'
                 : 'linear-gradient(to bottom, transparent 0%, rgba(10,10,10,0.1) 25%, rgba(10,10,10,0.5) 55%, rgba(10,10,10,0.85) 80%, #0a0a0a 100%)',
             }} />
@@ -534,7 +582,6 @@ export default function ProfilePage({ user, links }: Props) {
               }}>
                 @{user.username}
               </div>
-              {/* Quick-link icon bar */}
               {headerLinks.length > 0 && (
                 <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginTop: 10 }}>
                   {headerLinks.map(link => {
@@ -545,14 +592,14 @@ export default function ProfilePage({ user, links }: Props) {
                         style={{
                           width: 34, height: 34, borderRadius: '50%',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          background: isSoft ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.15)',
+                          backgroundColor: isSoft ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.15)',
                           border: isSoft ? '1px solid rgba(0,0,0,0.08)' : '1px solid rgba(255,255,255,0.12)',
                           backdropFilter: 'blur(8px)',
-                          transition: 'transform 0.2s, background 0.2s',
+                          transition: 'transform 0.2s, background-color 0.2s',
                           cursor: 'pointer', textDecoration: 'none',
                         }}
-                        onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.15)'; e.currentTarget.style.background = isSoft ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.25)' }}
-                        onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = isSoft ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.15)' }}
+                        onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.15)'; e.currentTarget.style.backgroundColor = isSoft ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.25)' }}
+                        onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.backgroundColor = isSoft ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.15)' }}
                       >
                         {icon.type === 'platform' && icon.svg ? (
                           <span style={{ width: 17, height: 17, color: isSoft ? '#1a1a2e' : '#fff' }} dangerouslySetInnerHTML={{ __html: icon.svg }} />
@@ -564,7 +611,6 @@ export default function ProfilePage({ user, links }: Props) {
                   })}
                 </div>
               )}
-              {/* Bio */}
               {showBio && user.bio && (
                 <p style={{
                   color: isSoft ? 'rgba(26,26,46,0.45)' : 'rgba(255,255,255,0.5)',
@@ -579,8 +625,8 @@ export default function ProfilePage({ user, links }: Props) {
             </div>
           </div>
 
-          {/* ════ LINKS — inside the card, narrower than the hero ════ */}
-          <div style={{ padding: '4px 14px 32px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {/* ════ LINKS ════ */}
+          <div style={{ padding: '4px 14px 32px', display: 'flex', flexDirection: 'column', gap: 8 }}>
             <LinksSection
               links={enabledLinks}
               variant={variant}
@@ -590,16 +636,12 @@ export default function ProfilePage({ user, links }: Props) {
           </div>
 
           {/* ════ FOOTER ════ */}
-          <div style={{
-            padding: '20px 14px 24px',
-            textAlign: 'center',
-          }}>
+          <div style={{ padding: '20px 14px 24px', textAlign: 'center' }}>
             <a
               href="https://glimr.io"
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6,
-                textDecoration: 'none',
-                fontSize: 12, fontWeight: 500,
+                textDecoration: 'none', fontSize: 12, fontWeight: 500,
                 color: isSoft ? 'rgba(26,26,46,0.3)' : 'rgba(255,255,255,0.25)',
                 transition: 'color 0.2s',
               }}
