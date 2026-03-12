@@ -395,7 +395,7 @@ export default function ProfilePage({ user, links }: Props) {
       const h = heroRef.current.offsetHeight || 1
       const s = window.scrollY
       // LinkMe formula: Math.min(0.95, 2.6 * Math.min(1, Math.max(0, 1 - (h - s) / h)))
-      const t = Math.min(0.95, 2.6 * Math.min(1, Math.max(0, 1 - (h - s) / h)))
+      const t = Math.min(1, 2.6 * Math.min(1, Math.max(0, 1 - (h - s) / h)))
       setHeroOverlay(t)
     }
     window.addEventListener('scroll', handleScroll, { passive: true })
@@ -571,7 +571,9 @@ export default function ProfilePage({ user, links }: Props) {
             <div style={{
               position: 'absolute', bottom: 0, left: 0, right: 0,
               height: '55%',
-              backgroundImage: 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.03) 20%, rgba(0,0,0,0.15) 45%, rgba(0,0,0,0.4) 70%, rgba(0,0,0,0.7) 90%, rgba(0,0,0,0.85) 100%)',
+              backgroundImage: isSoft
+                ? 'linear-gradient(to bottom, transparent 0%, rgba(255,245,250,0.02) 25%, rgba(255,245,250,0.12) 50%, rgba(255,245,250,0.35) 70%, rgba(255,245,250,0.6) 85%, rgba(255,245,250,0.8) 100%)'
+                : 'linear-gradient(to bottom, transparent 0%, rgba(10,10,10,0.02) 25%, rgba(10,10,10,0.12) 50%, rgba(10,10,10,0.35) 70%, rgba(10,10,10,0.6) 85%, rgba(10,10,10,0.8) 100%)',
               pointerEvents: 'none',
             }} />
             {/* Dark overlay that increases on scroll — LinkMe formula */}
@@ -593,8 +595,8 @@ export default function ProfilePage({ user, links }: Props) {
             <div ref={nameRef} style={{
               textAlign: 'center', padding: '28px 20px 16px',
               backgroundImage: isSoft
-                ? 'linear-gradient(to bottom, transparent 0%, rgba(255,245,250,0.6) 40%, #FFF5FA 100%)'
-                : 'linear-gradient(to bottom, transparent 0%, rgba(10,10,10,0.6) 40%, #0a0a0a 100%)',
+                ? 'linear-gradient(to bottom, rgba(255,245,250,0.8) 0%, rgba(255,245,250,0.92) 30%, #FFF5FA 60%)'
+                : 'linear-gradient(to bottom, rgba(10,10,10,0.8) 0%, rgba(10,10,10,0.92) 30%, #0a0a0a 60%)',
             }}>
               <div style={{
                 fontSize: 32, fontWeight: 900,
