@@ -365,7 +365,7 @@ function LinksSection({ links, variant, linkStyle, onWarning }: {
 export default function ProfilePage({ user, links }: Props) {
   const [warningUrl, setWarningUrl] = useState<string | null>(null)
   const [showStickyHeader, setShowStickyHeader] = useState(false)
-  const [heroOpacity, setHeroOpacity] = useState(1)
+  const [heroOverlay, setHeroOverlay] = useState(0)
   const heroRef = useRef<HTMLDivElement>(null)
   const nameRef = useRef<HTMLDivElement>(null)
   const enabledLinks = links.filter(l => l.enabled === 1)
@@ -388,23 +388,16 @@ export default function ProfilePage({ user, links }: Props) {
     return () => observer.disconnect()
   }, [])
 
-  // Scroll-based hero opacity fade
+  // Scroll-based hero darkening overlay
   useEffect(() => {
     const handleScroll = () => {
       if (!heroRef.current) return
       const rect = heroRef.current.getBoundingClientRect()
       const heroHeight = heroRef.current.offsetHeight
-      // Start fading when bottom half of hero is being covered
-      const fadeStart = heroHeight * 0.5
-      const fadeEnd = heroHeight * 0.05
-      const visibleBottom = rect.bottom
-      if (visibleBottom <= fadeEnd) {
-        setHeroOpacity(0)
-      } else if (visibleBottom >= fadeStart) {
-        setHeroOpacity(1)
-      } else {
-        setHeroOpacity((visibleBottom - fadeEnd) / (fadeStart - fadeEnd))
-      }
+      // Start darkening when scrolling begins, max darkness when hero is mostly covered
+      const scrolled = Math.max(0, -rect.top)
+      const progress = Math.min(1, scrolled / (heroHeight * 0.7))
+      setHeroOverlay(progress * 0.85) // max 85% dark
     }
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
@@ -553,11 +546,10 @@ export default function ProfilePage({ user, links }: Props) {
             : '0 0 50px rgba(0,0,0,0.4)',
           minHeight: '95vh',
         }}>
-          {/* Hero IMAGE only — sticky, fades out as content scrolls over */}
+          {/* Hero IMAGE only — sticky, darkens as content scrolls over */}
           <div ref={heroRef} style={{
             position: 'sticky', top: 0, zIndex: 1,
             overflow: 'hidden', borderTopLeftRadius: 28, borderTopRightRadius: 28,
-            opacity: heroOpacity, transition: 'opacity 0.05s linear',
           }}>
             {avatarUrl ? (
               <img src={avatarUrl} alt={displayName} style={{
@@ -576,19 +568,29 @@ export default function ProfilePage({ user, links }: Props) {
                 {displayName[0]?.toUpperCase()}
               </div>
             )}
+            {/* Dark overlay that increases on scroll */}
+            <div style={{
+              position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+              backgroundColor: '#000',
+              opacity: heroOverlay,
+              pointerEvents: 'none',
+              transition: 'opacity 0.05s linear',
+            }} />
           </div>
 
           {/* ════ SCROLLABLE CONTENT — name, bio, icons, links ════
               This entire section scrolls up over the hero image */}
           <div style={{
             position: 'relative', zIndex: 2,
-            backgroundColor: isSoft ? '#FFF5FA' : '#0a0a0a',
-            borderTopLeftRadius: 28,
-            borderTopRightRadius: 28,
             marginTop: -80,
           }}>
-            {/* Name + badge + handle + icons + bio */}
-            <div ref={nameRef} style={{ textAlign: 'center', padding: '28px 20px 8px' }}>
+            {/* Name + badge + handle + icons + bio — TRANSPARENT, hero shows through */}
+            <div ref={nameRef} style={{
+              textAlign: 'center', padding: '28px 20px 16px',
+              backgroundImage: isSoft
+                ? 'linear-gradient(to bottom, transparent 0%, rgba(255,245,250,0.6) 40%, #FFF5FA 100%)'
+                : 'linear-gradient(to bottom, transparent 0%, rgba(10,10,10,0.6) 40%, #0a0a0a 100%)',
+            }}>
               <div style={{
                 fontSize: 32, fontWeight: 900,
                 color: isSoft ? '#1a1a2e' : '#fff',
@@ -647,6 +649,7 @@ export default function ProfilePage({ user, links }: Props) {
 
             {/* Links */}
             <div style={{
+              backgroundColor: isSoft ? '#FFF5FA' : '#0a0a0a',
               padding: '8px 14px 32px',
               display: 'flex', flexDirection: 'column', gap: 8,
             }}>
