@@ -472,11 +472,12 @@ export default function ProfilePage({ user, links }: Props) {
           <div style={{ position: 'relative', overflow: 'hidden' }}>
             {avatarUrl ? (
               <img src={avatarUrl} alt={displayName} style={{
-                width: '100%', height: 520, objectFit: 'cover', objectPosition: 'center top', display: 'block',
+                width: '100%', aspectRatio: '3 / 4', maxHeight: 580, minHeight: 360,
+                objectFit: 'cover', objectPosition: 'center top', display: 'block',
               }} />
             ) : (
               <div style={{
-                width: '100%', height: 520,
+                width: '100%', aspectRatio: '3 / 4', maxHeight: 580, minHeight: 360,
                 background: isSoft
                   ? 'linear-gradient(135deg, #f9a8d4, #c084fc, #93c5fd)'
                   : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -571,6 +572,31 @@ export default function ProfilePage({ user, links }: Props) {
               linkStyle={user.link_style}
               onWarning={setWarningUrl}
             />
+          </div>
+
+          {/* ════ FOOTER ════ */}
+          <div style={{
+            padding: '20px 14px 24px',
+            textAlign: 'center',
+          }}>
+            <a
+              href="https://glimr.io"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                textDecoration: 'none',
+                fontSize: 12, fontWeight: 500,
+                color: isSoft ? 'rgba(26,26,46,0.3)' : 'rgba(255,255,255,0.25)',
+                transition: 'color 0.2s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.color = isSoft ? 'rgba(26,26,46,0.5)' : 'rgba(255,255,255,0.45)' }}
+              onMouseLeave={e => { e.currentTarget.style.color = isSoft ? 'rgba(26,26,46,0.3)' : 'rgba(255,255,255,0.25)' }}
+            >
+              <svg width="14" height="14" viewBox="0 0 26 26" fill="none">
+                <rect width="26" height="26" rx="6" fill="currentColor" fillOpacity="0.4"/>
+                <text x="13" y="18" textAnchor="middle" fontSize="14" fontWeight="800" fill="currentColor">G</text>
+              </svg>
+              Powered by Glimr
+            </a>
           </div>
         </div>
       </div>

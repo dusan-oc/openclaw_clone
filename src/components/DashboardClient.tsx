@@ -397,7 +397,10 @@ export default function DashboardClient({ user: initialUser }: { user: User }) {
             width: '100%', maxWidth: 430, borderRadius: 16,
             border: '1px solid rgba(255,255,255,0.08)',
             boxShadow: '0 0 60px rgba(99, 102, 241, 0.08)',
-            overflow: 'hidden', background: '#000',
+            overflow: 'hidden',
+            background: settingsForm.bg_mode === 'color' && settingsForm.bg_value
+              ? settingsForm.bg_value
+              : settingsForm.theme === 'soft' ? '#FFF5FA' : '#000',
             position: 'relative',
             /* clip fixed-position blurred bg inside this container */
             clipPath: 'inset(0 round 16px)',
@@ -530,38 +533,96 @@ export default function DashboardClient({ user: initialUser }: { user: User }) {
                     outline: 'none', resize: 'vertical',
                   }}
                 />
-                <button
-                  disabled={generatingBg || !bgPromptInput.trim()}
-                  onClick={async () => {
-                    setGeneratingBg(true)
-                    try {
-                      const res = await fetch('/api/user/generate-bg', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ prompt: bgPromptInput.trim() }),
-                      })
-                      if (res.ok) {
-                        const data = await res.json()
-                        updateSettings(p => ({
-                          ...p,
-                          bg_mode: 'ai' as const,
-                          bg_value: data.bg_value,
-                          bg_prompt: data.bg_prompt,
-                          show_blurred_bg: 0,
-                        }))
+                <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                  <button
+                    disabled={generatingBg || !bgPromptInput.trim()}
+                    onClick={async () => {
+                      setGeneratingBg(true)
+                      try {
+                        const res = await fetch('/api/user/generate-bg', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ prompt: bgPromptInput.trim() }),
+                        })
+                        if (res.ok) {
+                          const data = await res.json()
+                          updateSettings(p => ({
+                            ...p,
+                            bg_mode: 'ai' as const,
+                            bg_value: data.bg_value,
+                            bg_prompt: data.bg_prompt,
+                            show_blurred_bg: 0,
+                          }))
+                        }
+                      } finally {
+                        setGeneratingBg(false)
                       }
-                    } finally {
-                      setGeneratingBg(false)
-                    }
-                  }}
-                  style={{
-                    width: '100%', marginTop: 8, padding: '10px 0', borderRadius: 8,
-                    border: 'none', cursor: generatingBg ? 'wait' : 'pointer',
-                    background: generatingBg ? 'rgba(99,102,241,0.3)' : accent,
-                    color: '#fff', fontSize: 13, fontWeight: 600, fontFamily: 'inherit',
-                  }}>
-                  {generatingBg ? '✨ Generating…' : '✨ Generate Background'}
-                </button>
+                    }}
+                    style={{
+                      flex: 1, padding: '10px 0', borderRadius: 8,
+                      border: 'none', cursor: generatingBg ? 'wait' : 'pointer',
+                      background: generatingBg ? 'rgba(99,102,241,0.3)' : accent,
+                      color: '#fff', fontSize: 13, fontWeight: 600, fontFamily: 'inherit',
+                    }}>
+                    {generatingBg ? '✨ Generating…' : '✨ Generate'}
+                  </button>
+                  <button
+                    disabled={generatingBg}
+                    onClick={async () => {
+                      const RANDOM_PROMPTS = [
+                        'dark cosmic nebula with deep purple and blue swirls',
+                        'neon pink and cyan retro synthwave grid with glow',
+                        'midnight ocean waves with moonlight reflections',
+                        'dark forest with floating fireflies and green mist',
+                        'abstract liquid metal in silver and purple',
+                        'starfield with shooting stars and aurora borealis',
+                        'dark cherry blossom rain with soft pink petals',
+                        'geometric sacred geometry patterns in gold on black',
+                        'underwater bioluminescent jellyfish in deep blue',
+                        'volcanic lava cracks glowing orange on dark rock',
+                        'holographic rainbow shimmer on dark background',
+                        'dark rose garden with dew drops and moonlight',
+                        'cyberpunk city rain with neon purple reflections',
+                        'scattered diamonds and sparkles on velvet black',
+                        'northern lights dancing over a frozen dark landscape',
+                        'dark tropical jungle with neon flowers',
+                        'ethereal angel wings with soft white feathers on black',
+                        'constellation map with glowing stars connected by thin lines',
+                        'dark marble texture with gold veins',
+                        'floating hearts and butterflies in soft pink and purple',
+                      ]
+                      const prompt = RANDOM_PROMPTS[Math.floor(Math.random() * RANDOM_PROMPTS.length)]
+                      setBgPromptInput(prompt)
+                      setGeneratingBg(true)
+                      try {
+                        const res = await fetch('/api/user/generate-bg', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ prompt }),
+                        })
+                        if (res.ok) {
+                          const data = await res.json()
+                          updateSettings(p => ({
+                            ...p,
+                            bg_mode: 'ai' as const,
+                            bg_value: data.bg_value,
+                            bg_prompt: data.bg_prompt,
+                            show_blurred_bg: 0,
+                          }))
+                        }
+                      } finally {
+                        setGeneratingBg(false)
+                      }
+                    }}
+                    style={{
+                      padding: '10px 14px', borderRadius: 8,
+                      border: '1px solid rgba(255,255,255,0.12)', cursor: generatingBg ? 'wait' : 'pointer',
+                      background: 'rgba(255,255,255,0.06)',
+                      color: '#fff', fontSize: 13, fontWeight: 600, fontFamily: 'inherit',
+                    }}>
+                    🎲
+                  </button>
+                </div>
               </div>
             )}
           </div>

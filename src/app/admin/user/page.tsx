@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
@@ -71,7 +71,11 @@ function BarChart({ data, color, label }: { data: { date: string; count: number 
   )
 }
 
-export default function AdminUserDashboard() {
+export default function AdminUserDashboardPage() {
+  return <Suspense fallback={<div style={{ color: '#fff', padding: 40 }}>Loading...</div>}><AdminUserDashboard /></Suspense>
+}
+
+function AdminUserDashboard() {
   const searchParams = useSearchParams()
   const userId = searchParams.get('id')
   const [data, setData] = useState<UserData | null>(null)
