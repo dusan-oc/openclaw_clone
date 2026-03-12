@@ -118,7 +118,7 @@ function PreviewArea({ settingsForm, user, links }: {
         // Image mode — show the generated image as background
         previewStyle = {
           backgroundImage: `url(${parsed.url})`,
-          backgroundSize: 'contain',
+          backgroundSize: 'cover',
           backgroundPosition: 'center top',
           backgroundRepeat: 'no-repeat',
         }
@@ -659,7 +659,7 @@ export default function DashboardClient({ user: initialUser }: { user: User }) {
                 />
                 {aiSubMode === 'image' && (
                   <p style={{ fontSize: 10, color: '#6B7280', margin: '4px 0 0', lineHeight: 1.4 }}>
-                    Generates a 1024×1536 image via AI. Takes ~15-30s.
+                    Generates a landscape image via AI. Takes ~15-30s.
                   </p>
                 )}
                 <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
